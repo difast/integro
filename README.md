@@ -28,6 +28,7 @@ Node.js: 20.9 или новее (рекомендуется 22, см. `.nvmrc`).
 | Специалисты (раздел выводится, если список не пуст) | `src/config/team.ts` |
 | Цвета, шрифт, общие стили | `src/app/globals.css` |
 | Изображение для соцсетей | `public/og.png` |
+| Логотип (знак) и фавиконы | `public/brand/logo-mark.png`, `src/app/icon.png`, `src/app/apple-icon.png`, `src/app/favicon.ico`; исходник — `assets/brand/logo-source.jpeg` |
 
 Пустые поля (`null`) на сайте не выводятся — заглушек нет. Список недостающих данных — `CONTENT_TODO.md`.
 
