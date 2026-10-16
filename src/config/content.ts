@@ -70,36 +70,25 @@ export const principles: Principle[] = [
   },
 ];
 
-export type Audience = { title: string; text: string; icon: "person" | "business" | "court" | "lawyer" };
+export type Audience = { title: string; text: string };
 
 export const audiences: Audience[] = [
   {
     title: "Частные лица",
     text: "Оценка имущества и исследования для сделок, нотариальных действий и личных споров.",
-    icon: "person",
   },
   {
     title: "Организации и бизнес",
     text: "Оценка активов и экспертные исследования для корпоративных задач и споров с контрагентами.",
-    icon: "business",
   },
   {
     title: "Суды",
     text: "Проведение экспертиз, назначенных определением суда, с направлением заключения в суд.",
-    icon: "court",
   },
   {
     title: "Юристы и представители",
     text: "Консультации по вопросам для эксперта и возможности проведения исследования до заявления ходатайства.",
-    icon: "lawyer",
   },
-];
-
-export const legalFramework: { code: string; text: string }[] = [
-  { code: "135-ФЗ", text: "Закон об оценочной деятельности в Российской Федерации" },
-  { code: "ФСО", text: "Федеральные стандарты оценки" },
-  { code: "ГПК · АПК · КАС", text: "Порядок назначения и проведения судебной экспертизы" },
-  { code: "152-ФЗ", text: "Защита персональных данных заказчиков" },
 ];
 
 export type Faq = { question: string; answer: string };

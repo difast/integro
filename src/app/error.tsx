@@ -11,11 +11,11 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
 
   return (
     <section className="container-page py-20 lg:py-32">
-      <p className="text-sm font-extrabold tracking-[0.18em] text-accent">ОШИБКА</p>
-      <h1 className="mt-5 max-w-2xl text-4xl leading-tight font-extrabold tracking-[-0.025em] sm:text-5xl">
+      <p className="label">Ошибка</p>
+      <h1 className="h-page mt-6 max-w-2xl">
         Что-то пошло не так
       </h1>
-      <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
+      <p className="lead mt-6 max-w-xl">
         При загрузке страницы произошла ошибка. Попробуйте обновить страницу или вернитесь на главную.
       </p>
       <div className="mt-10 flex flex-wrap gap-3">

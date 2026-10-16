@@ -1,41 +1,33 @@
-@import "@fontsource-variable/manrope";
 @import "tailwindcss";
 
-@theme {
-  --font-sans: "Manrope Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+/*
+ * Дизайн-система: тёмно-синяя основа, бордовый — только для точечных акцентов
+ * (номера разделов, активный пункт меню, обязательные поля). Прямые углы,
+ * тонкие линейки вместо карточек, одна гарнитура — IBM Plex Sans.
+ */
 
+@theme inline {
+  --font-sans: var(--font-plex-latin), var(--font-plex-cyrillic), "Segoe UI", Arial, sans-serif;
+}
+
+@theme {
   --color-ink: #0d1730;
-  --color-body: #2b3448;
-  --color-muted: #5a6479;
-  --color-line: #e2e5ec;
-  --color-paper: #f3f4f7;
-  --color-paper-strong: #e9ecf2;
+  --color-body: #29324a;
+  --color-muted: #5b6478;
+  --color-line: #dde1e8;
+  --color-line-strong: #c3c9d4;
+  --color-paper: #f5f6f8;
 
   --color-navy-950: #0a1430;
   --color-navy-900: #111f47;
-  --color-navy-800: #182a5c;
-  --color-navy-700: #233a78;
-  --color-navy-200: #c3cbe0;
-  --color-navy-100: #e3e8f4;
+  --color-navy-800: #1a2b5a;
+  --color-navy-700: #263b74;
+  --color-navy-300: #9aa6c4;
+  --color-navy-100: #e4e8f2;
 
-  --color-accent: #b31d2e;
-  --color-accent-hover: #961625;
-  --color-accent-soft: #fbecee;
-
-  --radius-card: 1.25rem;
-
-  --animate-rise: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-
-  @keyframes rise {
-    from {
-      opacity: 0;
-      transform: translateY(18px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
+  --color-accent: #a51c2c;
+  --color-accent-hover: #8a1624;
+  --color-accent-soft: #f8ecee;
 }
 
 @layer base {
@@ -51,7 +43,7 @@
   }
 
   body {
-    @apply bg-white font-sans text-body antialiased;
+    @apply bg-white font-sans text-[1rem] leading-[1.65] text-body antialiased;
     font-feature-settings: "kern", "liga";
   }
 
@@ -59,11 +51,13 @@
   h2,
   h3,
   h4 {
-    @apply text-ink;
+    @apply font-semibold text-ink;
     text-wrap: balance;
   }
 
-  p {
+  p,
+  li,
+  dd {
     text-wrap: pretty;
   }
 
@@ -73,37 +67,42 @@
   }
 
   :focus-visible {
-    outline: 3px solid var(--color-navy-700);
+    outline: 2px solid var(--color-navy-700);
     outline-offset: 3px;
-    border-radius: 4px;
   }
 }
 
 @layer components {
   .container-page {
-    @apply mx-auto w-full max-w-[1240px] px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8;
   }
 
-  .eyebrow {
-    @apply text-xs font-bold tracking-[0.18em] text-accent uppercase;
+  /* Подпись раздела: «01 — Услуги» */
+  .label {
+    @apply text-[0.8125rem] font-medium tracking-[0.08em] text-muted uppercase;
   }
 
-  .rule {
-    @apply block h-[3px] w-10 bg-accent;
+  .label-index {
+    @apply mr-3 text-accent tabular-nums;
   }
 
-  .link-underline {
-    @apply underline decoration-navy-200 decoration-2 underline-offset-4 transition-colors hover:decoration-accent;
+  .h-page {
+    @apply text-[2.125rem] leading-[1.12] tracking-[-0.015em] sm:text-[2.75rem] lg:text-[3.25rem];
   }
 
-  /* Появление блоков при прокрутке без JavaScript (там, где поддерживается). */
-  @supports (animation-timeline: view()) {
-    @media screen and (prefers-reduced-motion: no-preference) {
-      .reveal {
-        animation: rise linear both;
-        animation-timeline: view();
-        animation-range: entry 0% entry 40%;
-      }
-    }
+  .h-section {
+    @apply text-[1.625rem] leading-[1.2] tracking-[-0.01em] sm:text-[2rem];
+  }
+
+  .lead {
+    @apply text-[1.0625rem] leading-[1.6] text-muted sm:text-[1.1875rem];
+  }
+
+  .prose-text {
+    @apply max-w-[68ch] space-y-5 text-[1.0625rem] leading-[1.7];
+  }
+
+  .text-link {
+    @apply text-ink underline decoration-line-strong decoration-1 underline-offset-[5px] transition-colors hover:decoration-accent;
   }
 }

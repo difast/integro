@@ -1,26 +1,33 @@
 import "server-only";
 
 /**
- * Простое ограничение частоты запросов в памяти процесса.
- * Подходит для одного экземпляра приложения; при горизонтальном
- * масштабировании нужен общий стор (например, Redis).
+ * Ограничение частоты отправки формы в памяти процесса.
+ * IP-адреса не записываются на диск и удаляются не позднее чем через
+ * 15 минут — так описано в политике обработки персональных данных.
+ * Подходит для одного экземпляра приложения.
  */
+// Окно 14 минут + очистка раз в минуту: запись живёт не более 15 минут.
+const WINDOW_MS = 14 * 60_000;
 const hits = new Map<string, number[]>();
 
-export function isRateLimited(key: string, limit = 5, windowMs = 15 * 60_000): boolean {
-  const now = Date.now();
-  const recent = (hits.get(key) ?? []).filter((time) => now - time < windowMs);
-  if (recent.length >= limit) {
-    hits.set(key, recent);
-    return true;
+function purgeExpired(now: number) {
+  for (const [key, times] of hits) {
+    const recent = times.filter((time) => now - time < WINDOW_MS);
+    if (recent.length === 0) hits.delete(key);
+    else if (recent.length !== times.length) hits.set(key, recent);
   }
+}
+
+// Фоновая очистка, чтобы записи не жили дольше окна, даже если запросов больше нет.
+const timer = setInterval(() => purgeExpired(Date.now()), 60_000);
+timer.unref?.();
+
+export function isRateLimited(key: string, limit = 5): boolean {
+  const now = Date.now();
+  purgeExpired(now);
+  const recent = hits.get(key) ?? [];
+  if (recent.length >= limit) return true;
   recent.push(now);
   hits.set(key, recent);
-
-  if (hits.size > 5_000) {
-    for (const [storedKey, times] of hits) {
-      if (times.every((time) => now - time >= windowMs)) hits.delete(storedKey);
-    }
-  }
   return false;
 }

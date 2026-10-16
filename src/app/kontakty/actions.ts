@@ -89,7 +89,7 @@ export async function submitRequest(_prev: RequestFormState, formData: FormData)
     values.message,
     "",
     `Отправлено: ${new Date().toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })} (МСК)`,
-    "Заявитель подтвердил согласие на обработку персональных данных.",
+    `Заявитель отметил согласие на обработку персональных данных (редакция согласия от ${company.legalRevisionDate}).`,
   ].join("\n");
 
   try {

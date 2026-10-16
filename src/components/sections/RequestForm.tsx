@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef } from "react";
-import { AlertCircle, CheckCircle2, ChevronDown, Loader2, Send } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
 import { submitRequest } from "@/app/kontakty/actions";
 import { initialRequestState, limits, type RequestFieldName } from "@/lib/request-form";
+import { company } from "@/config/company";
+import { legalDocuments } from "@/config/legal";
+import { ConsentBody } from "@/content/legal/consent";
 import { buttonClass } from "@/components/ui/Button";
 
 type ServiceOption = { value: string; label: string };
@@ -21,12 +24,12 @@ type RequestFormProps = {
 };
 
 const inputClass =
-  "mt-2 block w-full rounded-xl border border-line bg-white px-4 py-3.5 text-base text-ink placeholder:text-muted/70 transition-colors focus:border-navy-700 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-navy-700 aria-[invalid=true]:border-accent disabled:bg-paper";
+  "mt-2 block w-full rounded-[2px] border border-line-strong bg-white px-4 py-3 text-base text-ink placeholder:text-muted/70 transition-colors focus:border-navy-900 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-navy-900 aria-[invalid=true]:border-accent disabled:bg-paper disabled:text-muted";
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
-    <p id={id} className="mt-2 text-sm font-semibold text-accent">
+    <p id={id} className="mt-2 text-[0.875rem] font-medium text-accent">
       {message}
     </p>
   );
@@ -72,10 +75,10 @@ export function RequestForm({
     <form ref={formRef} action={submit} noValidate className="space-y-6" aria-describedby="form-status">
       <div ref={statusRef} id="form-status" tabIndex={-1} aria-live="polite" className="outline-none">
         {!enabled ? (
-          <div className="flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950">
+          <div className="flex gap-3 border-l-[3px] border-navy-900 bg-paper p-4 text-[0.9375rem] leading-relaxed text-ink">
             <AlertCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
-              <p className="font-bold">Приём заявок через сайт пока не подключён.</p>
+              <p className="font-semibold">Приём заявок через сайт пока не подключён.</p>
               {showSetupHint ? (
                 <p className="mt-1">
                   Для владельца сайта: задайте переменные SMTP_HOST, SMTP_USER, SMTP_PASSWORD и MAIL_TO (см.
@@ -88,15 +91,15 @@ export function RequestForm({
           </div>
         ) : null}
         {state.status === "success" ? (
-          <div className="flex gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950">
+          <div className="flex gap-3 border-l-[3px] border-emerald-700 bg-emerald-50 p-4 text-emerald-950">
             <CheckCircle2 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
-            <p className="font-semibold">{state.message}</p>
+            <p className="font-medium">{state.message}</p>
           </div>
         ) : null}
         {state.status === "error" && state.message ? (
-          <div role="alert" className="flex gap-3 rounded-xl border border-accent/30 bg-accent-soft p-4 text-ink">
+          <div role="alert" className="flex gap-3 border-l-[3px] border-accent bg-accent-soft p-4 text-ink">
             <AlertCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
-            <p className="font-semibold">{state.message}</p>
+            <p className="font-medium">{state.message}</p>
           </div>
         ) : null}
       </div>
@@ -105,7 +108,7 @@ export function RequestForm({
         <legend className="sr-only">Данные для обращения</legend>
 
         <div>
-          <label htmlFor="name" className="font-bold text-ink">
+          <label htmlFor="name" className="text-[0.9375rem] font-medium text-ink">
             Как к вам обращаться <span className="text-accent" aria-hidden="true">*</span>
           </label>
           <input
@@ -124,7 +127,7 @@ export function RequestForm({
 
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
-            <label htmlFor="phone" className="font-bold text-ink">
+            <label htmlFor="phone" className="text-[0.9375rem] font-medium text-ink">
               Телефон
             </label>
             <input
@@ -142,7 +145,7 @@ export function RequestForm({
             <FieldError id="phone-error" message={errors.phone} />
           </div>
           <div>
-            <label htmlFor="email" className="font-bold text-ink">
+            <label htmlFor="email" className="text-[0.9375rem] font-medium text-ink">
               Электронная почта
             </label>
             <input
@@ -158,10 +161,10 @@ export function RequestForm({
             <FieldError id="email-error" message={errors.email} />
           </div>
         </div>
-        <p className="-mt-3 text-sm text-muted">Укажите хотя бы один способ связи.</p>
+        <p className="-mt-3 text-[0.875rem] text-muted">Укажите хотя бы один способ связи.</p>
 
         <div>
-          <label htmlFor="service" className="font-bold text-ink">
+          <label htmlFor="service" className="text-[0.9375rem] font-medium text-ink">
             Направление
           </label>
           <div className="relative">
@@ -181,14 +184,14 @@ export function RequestForm({
             </select>
             <ChevronDown
               aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 right-4 mt-1 h-5 w-5 -translate-y-1/2 text-muted"
+              className="pointer-events-none absolute top-1/2 right-4 mt-1 h-4 w-4 -translate-y-1/2 text-muted"
             />
           </div>
           <FieldError id="service-error" message={errors.service} />
         </div>
 
         <div>
-          <label htmlFor="message" className="font-bold text-ink">
+          <label htmlFor="message" className="text-[0.9375rem] font-medium text-ink">
             Опишите задачу <span className="text-accent" aria-hidden="true">*</span>
           </label>
           <textarea
@@ -211,36 +214,58 @@ export function RequestForm({
           <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
         </div>
 
-        <div>
+        <p className="text-[0.875rem] leading-relaxed text-muted">
+          Не указывайте в заявке паспортные данные, сведения о здоровье и персональные данные третьих лиц — они не
+          нужны для предварительного анализа задачи.
+        </p>
+
+        {/* Согласие оформлено отдельно: одно поле, без предварительной отметки и без иных подтверждений. */}
+        <div className="border-t border-line pt-6">
           <div className="flex gap-3">
             <input
               id="consent"
               name="consent"
               type="checkbox"
               required
-              className="mt-1 h-5 w-5 shrink-0 accent-[var(--color-accent)]"
+              className="mt-0.5 h-5 w-5 shrink-0 rounded-none accent-[var(--color-navy-900)]"
               {...errorProps("consent")}
             />
-            <label htmlFor="consent" className="text-sm leading-relaxed text-muted">
-              Я даю{" "}
-              <Link href="/soglasie-na-obrabotku" className="link-underline text-ink" target="_blank">
-                согласие на обработку персональных данных
-              </Link>{" "}
-              и подтверждаю, что ознакомлен с{" "}
-              <Link href="/politika-konfidencialnosti" className="link-underline text-ink" target="_blank">
-                политикой обработки персональных данных
-              </Link>
-              .
+            <label htmlFor="consent" className="text-[0.9375rem] leading-relaxed text-ink">
+              Даю согласие {company.legalName} на обработку моих персональных данных на условиях, изложенных в тексте
+              согласия ниже. <span className="text-accent" aria-hidden="true">*</span>
             </label>
           </div>
           <FieldError id="consent-error" message={errors.consent} />
+
+          <details className="group mt-4 ml-8 border-l-2 border-line pl-4">
+            <summary className="cursor-pointer list-none text-[0.875rem] font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-accent [&::-webkit-details-marker]:hidden">
+              <span className="group-open:hidden">Показать текст согласия</span>
+              <span className="hidden group-open:inline">Скрыть текст согласия</span>
+            </summary>
+            <div className="mt-4 max-h-80 overflow-y-auto pr-2 text-[0.875rem] leading-relaxed text-body">
+              <ConsentBody />
+              <p className="mt-4">
+                <Link href={legalDocuments.consent.href} className="text-link" target="_blank">
+                  Открыть согласие на отдельной странице
+                </Link>
+              </p>
+            </div>
+          </details>
+
+          <p className="mt-5 text-[0.8125rem] leading-relaxed text-muted">
+            Порядок обработки персональных данных описан в{" "}
+            <Link href={legalDocuments.policy.href} className="text-link" target="_blank">
+              политике обработки персональных данных
+            </Link>
+            .
+          </p>
         </div>
 
         <button type="submit" className={buttonClass("primary", "w-full sm:w-auto")}>
           {pending ? (
             <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
           ) : (
-            <Send aria-hidden="true" className="h-4 w-4" />
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
           )}
           {pending ? "Отправляем…" : "Отправить заявку"}
         </button>

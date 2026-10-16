@@ -34,7 +34,7 @@ export type Contacts = {
   email: string | null;
   /** Фактический адрес офиса для посетителей */
   officeAddress: string | null;
-  /** Режим работы, например "Пн–Пт, 10:00–19:00" */
+  /** Часы связи, например "Ежедневно с 10:00 до 20:00 по московскому времени" */
   workingHours: string | null;
 };
 
@@ -63,8 +63,11 @@ export type Company = {
   social: SocialLink[];
   /** Год, с которого указывается копирайт. null — только текущий год. */
   copyrightSince: number | null;
-  /** Дата редакции политики обработки персональных данных и текста согласия */
-  privacyPolicyDate: string;
+  /**
+   * Дата размещения на сайте текущей редакции юридических документов
+   * (политика, согласие). Это не дата утверждения — см. LEGAL_REVIEW.md.
+   */
+  legalRevisionDate: string;
 };
 
 export const company: Company = {
@@ -77,13 +80,13 @@ export const company: Company = {
     phone: null,
     email: null,
     officeAddress: null,
-    workingHours: null,
+    workingHours: "Ежедневно с 10:00 до 20:00 по московскому времени",
   },
   requisites: {
-    inn: null,
-    kpp: null,
-    ogrn: null,
-    legalAddress: null,
+    inn: "9734021152",
+    kpp: "773401001",
+    ogrn: "1257700559269",
+    legalAddress: "123592, город Москва, ул. Маршала Катукова, д. 22, к. 1",
     bankAccount: null,
     bankName: null,
     bik: null,
@@ -92,5 +95,5 @@ export const company: Company = {
   },
   social: [],
   copyrightSince: null,
-  privacyPolicyDate: "16.10.2026",
+  legalRevisionDate: "16.10.2026",
 };

@@ -1,20 +1,22 @@
 import Link from "next/link";
 import { company } from "@/config/company";
-import { clientLinks, mainNav } from "@/config/content";
+import { mainNav } from "@/config/content";
+import { legalDocumentList, legalIndexPath } from "@/config/legal";
 import { services } from "@/config/services";
-import { copyrightYears, hasAnyContact } from "@/lib/site";
-import { ContactList } from "@/components/ui/ContactList";
+import { requisitesLine } from "@/lib/organization";
+import { copyrightYears, phoneHref, workingHoursInline } from "@/lib/site";
 import { Logo } from "@/components/ui/Logo";
 
-function FooterColumn({ title, links }: { title: string; links: { label: string; href: string }[] }) {
+type FooterLink = { label: string; href: string };
+
+function FooterColumn({ title, links }: { title: string; links: FooterLink[] }) {
   return (
     <div>
-      <h2 className="text-xs font-bold tracking-[0.18em] text-ink uppercase">{title}</h2>
-      <span className="mt-3 block h-[3px] w-6 bg-navy-700" aria-hidden="true" />
-      <ul className="mt-5 space-y-3">
+      <h2 className="label">{title}</h2>
+      <ul className="mt-5 space-y-3 text-[0.9375rem]">
         {links.map((link) => (
           <li key={link.href}>
-            <Link href={link.href} className="text-muted transition-colors hover:text-ink">
+            <Link href={link.href} className="text-body transition-colors hover:text-ink hover:underline hover:underline-offset-4">
               {link.label}
             </Link>
           </li>
@@ -25,68 +27,66 @@ function FooterColumn({ title, links }: { title: string; links: { label: string;
 }
 
 export function SiteFooter() {
-  const { legalAddress, inn, ogrn } = company.requisites;
+  const { phone, email, workingHours } = company.contacts;
 
   return (
-    <footer className="border-t border-line bg-white">
-      <div className="container-page grid gap-12 py-14 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1.2fr] lg:py-16">
-        <div>
+    <footer className="border-t-[3px] border-navy-900 bg-paper">
+      <div className="container-page grid gap-12 py-14 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8 lg:py-16">
+        <div className="sm:col-span-2 lg:col-span-4">
           <Logo />
-          <p className="mt-6 max-w-xs leading-relaxed text-muted">
-            {company.legalName} — оценочная деятельность, судебная экспертиза и экспертные исследования.
-          </p>
+          <div className="mt-8 space-y-3 text-[0.9375rem]">
+            {workingHours ? (
+              <p>
+                <span className="text-muted">Часы связи: </span>
+                {workingHoursInline()}
+              </p>
+            ) : null}
+            {phone ? (
+              <p>
+                <a href={phoneHref(phone)} className="text-lg font-medium text-ink">
+                  {phone}
+                </a>
+              </p>
+            ) : null}
+            {email ? (
+              <p>
+                <a href={`mailto:${email}`} className="text-link">
+                  {email}
+                </a>
+              </p>
+            ) : null}
+            <p>
+              <Link href="/kontakty#zayavka" className="text-link">
+                Отправить заявку через сайт
+              </Link>
+            </p>
+          </div>
         </div>
 
-        <FooterColumn
-          title="Услуги"
-          links={services.map((service) => ({ label: service.title, href: `/uslugi/${service.slug}` }))}
-        />
-        <FooterColumn title="Клиентам" links={[...clientLinks, ...mainNav.filter((item) => item.href === "/o-kompanii")]} />
-
-        <div>
-          <h2 className="text-xs font-bold tracking-[0.18em] text-ink uppercase">Контакты</h2>
-          <span className="mt-3 block h-[3px] w-6 bg-navy-700" aria-hidden="true" />
-          <div className="mt-5">
-            {hasAnyContact() ? (
-              <ContactList />
-            ) : (
-              <Link href="/kontakty#zayavka" className="link-underline font-semibold text-ink">
-                Отправить обращение
-              </Link>
-            )}
-          </div>
-          {company.social.length > 0 ? (
-            <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
-              {company.social.map((link) => (
-                <li key={link.href}>
-                  <a href={link.href} target="_blank" rel="noopener noreferrer" className="link-underline font-semibold text-ink">
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {legalAddress ? (
-            <p className="mt-6 text-sm leading-relaxed text-muted">Юридический адрес: {legalAddress}</p>
-          ) : null}
+        <div className="lg:col-span-2">
+          <FooterColumn
+            title="Услуги"
+            links={services.map((service) => ({ label: service.shortTitle, href: `/uslugi/${service.slug}` }))}
+          />
+        </div>
+        <div className="lg:col-span-2">
+          <FooterColumn title="Компания" links={mainNav.filter((item) => item.href !== "/uslugi")} />
+        </div>
+        <div className="sm:col-span-2 lg:col-span-4">
+          <FooterColumn
+            title="Правовая информация"
+            links={[
+              ...legalDocumentList.map((doc) => ({ label: doc.title, href: doc.href })),
+              { label: "Все документы", href: legalIndexPath },
+            ]}
+          />
         </div>
       </div>
 
       <div className="border-t border-line">
-        <div className="container-page flex flex-col gap-3 py-6 text-sm text-muted md:flex-row md:items-center md:justify-between">
-          <p>
-            © {copyrightYears()} {company.legalName}
-            {inn ? <span> · ИНН {inn}</span> : null}
-            {ogrn ? <span> · ОГРН {ogrn}</span> : null}
-          </p>
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <Link href="/politika-konfidencialnosti" className="link-underline">
-              Политика обработки персональных данных
-            </Link>
-            <Link href="/soglasie-na-obrabotku" className="link-underline">
-              Согласие на обработку данных
-            </Link>
-          </div>
+        <div className="container-page flex flex-col gap-2 py-6 text-[0.8125rem] leading-relaxed text-muted lg:flex-row lg:justify-between lg:gap-8">
+          <p>{requisitesLine()}</p>
+          <p className="shrink-0">© {copyrightYears()}</p>
         </div>
       </div>
     </footer>

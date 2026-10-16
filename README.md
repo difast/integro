@@ -2,7 +2,8 @@
 
 Корпоративный сайт: оценочная деятельность, судебная экспертиза, экспертные исследования.
 
-Стек: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Lucide. Одно Next.js-приложение,
+Стек: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Lucide. Шрифт — IBM Plex Sans (SIL OFL 1.1),
+подключён локально через `next/font/local` (`src/fonts/`), без запросов к внешним сервисам. Одно Next.js-приложение,
 без отдельного backend, базы данных и внешних платных сервисов. Отправка формы — Server Action + SMTP.
 
 ## Команды
@@ -22,15 +23,19 @@ Node.js: 20.9 или новее (рекомендуется 22, см. `.nvmrc`).
 
 | Что | Файл |
 | --- | --- |
-| Название, контакты, реквизиты, домен, соцсети | `src/config/company.ts` |
+| Название, контакты, реквизиты, часы связи, домен, дата редакции юр. документов | `src/config/company.ts` |
+| Адреса и названия юридических документов | `src/config/legal.ts` |
+| Текст политики обработки ПД | `src/app/pravovaya-informaciya/politika-obrabotki-personalnyh-dannyh/page.tsx` |
+| Текст согласия (страница и форма — один источник) | `src/content/legal/consent.tsx` |
 | Услуги (тексты, правовая основа, перечни) | `src/config/services.ts` |
 | Навигация, порядок работы, принципы, FAQ, оплата | `src/config/content.ts` |
 | Специалисты (раздел выводится, если список не пуст) | `src/config/team.ts` |
-| Цвета, шрифт, общие стили | `src/app/globals.css` |
+| Цвета, типографика, общие стили | `src/app/globals.css` |
 | Изображение для соцсетей | `public/og.png` |
 | Логотип (знак) и фавиконы | `public/brand/logo-mark.png`, `src/app/icon.png`, `src/app/apple-icon.png`, `src/app/favicon.ico`; исходник — `assets/brand/logo-source.jpeg` |
 
-Пустые поля (`null`) на сайте не выводятся — заглушек нет. Список недостающих данных — `CONTENT_TODO.md`.
+Пустые поля (`null`) на сайте не выводятся — заглушек нет. Список недостающих данных — `CONTENT_TODO.md`,
+юридические вопросы для владельца и юриста — `LEGAL_REVIEW.md`.
 
 Пункты с `draft: true` в `services.ts` — типовые формулировки, требующие подтверждения. В режиме разработки
 они видны с меткой «черновик», в production скрыты (можно показать переменной `SHOW_DRAFT_CONTENT=true`).
@@ -40,7 +45,11 @@ Node.js: 20.9 или новее (рекомендуется 22, см. `.nvmrc`).
 - `/` — главная
 - `/uslugi`, `/uslugi/ocenka`, `/uslugi/sudebnaya-ekspertiza`, `/uslugi/ekspertnye-issledovaniya`
 - `/o-kompanii`, `/poryadok-raboty`, `/kontakty` (форма заявки, якорь `#zayavka`)
-- `/politika-konfidencialnosti`, `/soglasie-na-obrabotku`
+- `/pravovaya-informaciya` — правовая информация:
+  - `/pravovaya-informaciya/svedeniya-ob-organizacii`
+  - `/pravovaya-informaciya/politika-obrabotki-personalnyh-dannyh`
+  - `/pravovaya-informaciya/soglasie-na-obrabotku-personalnyh-dannyh`
+- старые адреса `/politika-konfidencialnosti` и `/soglasie-na-obrabotku` — постоянный редирект (308)
 - `/robots.txt`, `/sitemap.xml`, страница 404
 
 ## Переменные окружения
@@ -57,8 +66,10 @@ Node.js: 20.9 или новее (рекомендуется 22, см. `.nvmrc`).
 ## Форма заявки
 
 `src/app/kontakty/actions.ts` — серверная валидация, защита от спама (скрытое поле-ловушка, минимальное время
-заполнения, ограничение 5 заявок за 15 минут с одного IP в памяти процесса), отправка письма через `nodemailer`.
-Успех показывается только после фактической отправки письма SMTP-сервером.
+заполнения, ограничение 5 заявок за 14 минут с одного IP в памяти процесса, запись удаляется не позднее 15 минут),
+отправка письма через `nodemailer`. Успех показывается только после фактической отправки письма SMTP-сервером.
+Согласие на обработку ПД — отдельное поле без предварительной отметки, текст раскрывается в форме; дата редакции
+согласия попадает в письмо. При изменении формы обновите политику (см. `LEGAL_REVIEW.md`).
 
 Подойдёт SMTP почты на домене компании (например, почта Timeweb, Яндекс 360, Mail.ru для бизнеса).
 Для Яндекс 360: `SMTP_HOST=smtp.yandex.ru`, `SMTP_PORT=465`, `SMTP_SECURE=true`, пароль приложения в `SMTP_PASSWORD`.

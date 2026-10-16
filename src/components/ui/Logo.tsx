@@ -27,15 +27,15 @@ export function Logo({ inverted = false, className = "" }: LogoProps) {
       className={`group inline-flex items-center gap-3 ${className}`}
       aria-label={`${company.legalName} — на главную`}
     >
-      <LogoMark className="h-11 w-auto shrink-0" />
+      <LogoMark className="h-10 w-auto shrink-0" />
       <span className="flex flex-col leading-none">
         <span
-          className={`text-[1.2rem] font-extrabold tracking-[0.14em] uppercase ${inverted ? "text-white" : "text-ink"}`}
+          className={`text-[1.125rem] font-semibold tracking-[0.16em] uppercase ${inverted ? "text-white" : "text-ink"}`}
         >
           {company.shortName}
         </span>
         <span
-          className={`mt-1 text-[0.68rem] font-semibold tracking-[0.06em] whitespace-nowrap ${inverted ? "text-navy-200" : "text-muted"}`}
+          className={`mt-1.5 text-[0.6875rem] font-normal tracking-[0.04em] whitespace-nowrap ${inverted ? "text-navy-300" : "text-muted"}`}
         >
           {company.tagline.toLowerCase()}
         </span>

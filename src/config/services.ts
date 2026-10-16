@@ -18,14 +18,11 @@ export type LegalBasis = {
   text: string;
 };
 
-export type ServiceIcon = "valuation" | "court" | "research";
-
 export type Service = {
   slug: string;
   title: string;
   /** Краткое название для меню и форм */
   shortTitle: string;
-  icon: ServiceIcon;
   /** Короткое описание для карточек */
   summary: string;
   metaDescription: string;
@@ -43,7 +40,6 @@ export const services: Service[] = [
     slug: "ocenka",
     title: "Оценочная деятельность",
     shortTitle: "Оценка",
-    icon: "valuation",
     summary:
       "Определение рыночной и иных видов стоимости с оформлением отчёта об оценке по требованиям Федерального закона № 135-ФЗ и федеральных стандартов оценки.",
     metaDescription:
@@ -109,7 +105,6 @@ export const services: Service[] = [
     slug: "sudebnaya-ekspertiza",
     title: "Судебная экспертиза",
     shortTitle: "Судебная экспертиза",
-    icon: "court",
     summary:
       "Проведение экспертиз, назначенных судом, и подготовка заключения эксперта по вопросам, поставленным в определении о назначении экспертизы.",
     metaDescription:
@@ -158,7 +153,6 @@ export const services: Service[] = [
     slug: "ekspertnye-issledovaniya",
     title: "Экспертные исследования",
     shortTitle: "Экспертные исследования",
-    icon: "research",
     summary:
       "Внесудебные исследования по запросу заказчика с оформлением заключения специалиста — для досудебного урегулирования спора и обоснования позиции стороны.",
     metaDescription:

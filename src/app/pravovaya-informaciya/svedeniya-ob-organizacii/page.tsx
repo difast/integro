@@ -1,0 +1,55 @@
+import Link from "next/link";
+import { legalDocumentList, legalDocuments } from "@/config/legal";
+import { pageMetadata } from "@/lib/metadata";
+import { organizationDetails } from "@/lib/organization";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { DetailsTable } from "@/components/ui/DetailsTable";
+import { ButtonLink } from "@/components/ui/Button";
+
+const doc = legalDocuments.organization;
+
+export const metadata = pageMetadata({
+  title: doc.title,
+  description:
+    "Официальные сведения об ООО «Интегро»: полное наименование, ОГРН, ИНН, КПП, юридический адрес и часы связи.",
+  path: doc.href,
+});
+
+export default function OrganizationPage() {
+  return (
+    <>
+      <PageHeader
+        title={doc.title}
+        crumbs={[{ label: "Правовая информация", href: "/pravovaya-informaciya" }, { label: doc.title }]}
+        lead="Официальные сведения об организации, через которую заключаются договоры и проводятся расчёты за услуги."
+      />
+      <div className="container-page grid gap-12 py-12 lg:grid-cols-12 lg:gap-8 lg:py-20">
+        <section aria-labelledby="details-title" className="lg:col-span-8">
+          <h2 id="details-title" className="sr-only">
+            Реквизиты
+          </h2>
+          <DetailsTable rows={organizationDetails()} />
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <ButtonLink href="/kontakty#zayavka">Оставить заявку</ButtonLink>
+          </div>
+        </section>
+        <aside aria-labelledby="docs-title" className="lg:col-span-3 lg:col-start-10">
+          <h2 id="docs-title" className="label">
+            Документы
+          </h2>
+          <ul className="mt-5 border-t border-line text-[0.9375rem]">
+            {legalDocumentList
+              .filter((item) => item.href !== doc.href)
+              .map((item) => (
+                <li key={item.href} className="border-b border-line py-3.5">
+                  <Link href={item.href} className="text-link">
+                    {item.title}
+                  </Link>
+                </li>
+              ))}
+          </ul>
+        </aside>
+      </div>
+    </>
+  );
+}

@@ -8,6 +8,21 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
+  // Старые адреса документов ведут на единственные действующие версии.
+  async redirects() {
+    return [
+      {
+        source: "/politika-konfidencialnosti",
+        destination: "/pravovaya-informaciya/politika-obrabotki-personalnyh-dannyh",
+        permanent: true,
+      },
+      {
+        source: "/soglasie-na-obrabotku",
+        destination: "/pravovaya-informaciya/soglasie-na-obrabotku-personalnyh-dannyh",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

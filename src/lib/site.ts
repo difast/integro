@@ -1,4 +1,4 @@
-import { company, type Requisites } from "@/config/company";
+import { company } from "@/config/company";
 
 /** Основной адрес сайта: переменная SITE_URL имеет приоритет над конфигом. */
 export function getSiteUrl(): string | null {
@@ -31,25 +31,6 @@ export function hasAnyContact(): boolean {
   return Boolean(phone || email || officeAddress);
 }
 
-const requisiteLabels: Record<keyof Requisites, string> = {
-  inn: "ИНН",
-  kpp: "КПП",
-  ogrn: "ОГРН",
-  legalAddress: "Юридический адрес",
-  director: "Генеральный директор",
-  bankAccount: "Расчётный счёт",
-  bankName: "Банк",
-  bik: "БИК",
-  correspondentAccount: "Корр. счёт",
-};
-
-/** Только заполненные реквизиты, в фиксированном порядке. */
-export function filledRequisites(): { label: string; value: string }[] {
-  return (Object.keys(requisiteLabels) as (keyof Requisites)[])
-    .map((key) => ({ label: requisiteLabels[key], value: company.requisites[key] }))
-    .filter((item): item is { label: string; value: string } => Boolean(item.value));
-}
-
 export function copyrightYears(): string {
   const now = new Date().getFullYear();
   const since = company.copyrightSince;
@@ -63,3 +44,9 @@ export function copyrightYears(): string {
  */
 export const showDraftContent =
   process.env.NODE_ENV !== "production" || process.env.SHOW_DRAFT_CONTENT === "true";
+
+/** Часы связи для середины фразы: «Часы связи: ежедневно с 10:00…». */
+export function workingHoursInline(): string | null {
+  const hours = company.contacts.workingHours;
+  return hours ? hours.charAt(0).toLowerCase() + hours.slice(1) : null;
+}
