@@ -1,0 +1,109 @@
+@import "@fontsource-variable/manrope";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --color-ink: #0d1730;
+  --color-body: #2b3448;
+  --color-muted: #5a6479;
+  --color-line: #e2e5ec;
+  --color-paper: #f3f4f7;
+  --color-paper-strong: #e9ecf2;
+
+  --color-navy-950: #0a1430;
+  --color-navy-900: #111f47;
+  --color-navy-800: #182a5c;
+  --color-navy-700: #233a78;
+  --color-navy-200: #c3cbe0;
+  --color-navy-100: #e3e8f4;
+
+  --color-accent: #b31d2e;
+  --color-accent-hover: #961625;
+  --color-accent-soft: #fbecee;
+
+  --radius-card: 1.25rem;
+
+  --animate-rise: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 6rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    @apply bg-white font-sans text-body antialiased;
+    font-feature-settings: "kern", "liga";
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-ink;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--color-navy-100);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-navy-700);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-[1240px] px-4 sm:px-6 lg:px-8;
+  }
+
+  .eyebrow {
+    @apply text-xs font-bold tracking-[0.18em] text-accent uppercase;
+  }
+
+  .rule {
+    @apply block h-[3px] w-10 bg-accent;
+  }
+
+  .link-underline {
+    @apply underline decoration-navy-200 decoration-2 underline-offset-4 transition-colors hover:decoration-accent;
+  }
+
+  /* Появление блоков при прокрутке без JavaScript (там, где поддерживается). */
+  @supports (animation-timeline: view()) {
+    @media screen and (prefers-reduced-motion: no-preference) {
+      .reveal {
+        animation: rise linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 40%;
+      }
+    }
+  }
+}
