@@ -1,0 +1,23 @@
+{
+  "name": "integro-video",
+  "private": true,
+  "type": "module",
+  "description": "Рекламный ролик ООО «Интегро» (Motion Canvas)",
+  "scripts": {
+    "start": "vite --port 9000 --strictPort",
+    "typecheck": "tsc --noEmit",
+    "voiceover": "node scripts/voiceover.ts",
+    "render": "node scripts/render-frames.mjs",
+    "encode": "bash scripts/encode.sh"
+  },
+  "dependencies": {
+    "@motion-canvas/2d": "^3.17.2",
+    "@motion-canvas/core": "^3.17.2"
+  },
+  "devDependencies": {
+    "@motion-canvas/ui": "^3.17.2",
+    "@motion-canvas/vite-plugin": "^3.17.2",
+    "typescript": "^7.0.2",
+    "vite": "^5.4.21"
+  }
+}

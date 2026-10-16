@@ -4,9 +4,11 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { company } from "@/config/company";
 import { audiences, principles } from "@/config/content";
 import { services } from "@/config/services";
+import { companyVideo } from "@/config/video";
 import { getSiteUrl } from "@/lib/site";
 import { ButtonLink } from "@/components/ui/Button";
 import { Section } from "@/components/ui/Section";
+import { CompanyVideo } from "@/components/sections/CompanyVideo";
 import { CtaBand } from "@/components/sections/CtaBand";
 import { ProcessSteps } from "@/components/sections/ProcessSteps";
 
@@ -112,6 +114,52 @@ export default function HomePage() {
           ))}
         </ul>
       </Section>
+
+      <section aria-labelledby="video-title" className="bg-navy-900 text-white">
+        <div className="container-page grid items-center gap-10 py-16 lg:grid-cols-12 lg:gap-12 lg:py-24">
+          <div className="lg:col-span-7">
+            <CompanyVideo
+              title={companyVideo.title}
+              webm={companyVideo.webm}
+              mp4={companyVideo.mp4}
+              poster={companyVideo.poster}
+              width={companyVideo.width}
+              height={companyVideo.height}
+              hasAudio={companyVideo.hasAudio}
+            />
+          </div>
+          <div className="lg:col-span-5">
+            <p className="label text-navy-300">О компании за минуту</p>
+            <h2 id="video-title" className="h-section mt-5 text-white">
+              Как «Интегро» помогает разобраться в вашем вопросе
+            </h2>
+            <p className="mt-5 text-[1.0625rem] leading-relaxed text-navy-300">
+              С какими задачами к нам обращаются и как устроена работа — от заявки до готового отчёта или
+              заключения.
+            </p>
+            <div className="mt-8">
+              <ButtonLink href="/kontakty#zayavka" variant="light">
+                Оставить заявку
+                <ArrowRight aria-hidden="true" className="h-4 w-4" />
+              </ButtonLink>
+            </div>
+            <details className="group mt-8 border-t border-white/15 pt-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-[0.9375rem] font-medium text-white [&::-webkit-details-marker]:hidden">
+                Текст ролика
+                <span aria-hidden="true" className="text-navy-300 group-open:hidden">
+                  +
+                </span>
+                <span aria-hidden="true" className="hidden text-navy-300 group-open:inline">
+                  −
+                </span>
+              </summary>
+              <p className="mt-4 text-[0.9375rem] leading-relaxed text-navy-300">
+                {companyVideo.transcript.cues.map((cue) => cue.text).join(" ")}
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
 
       <Section
         id="process-title"

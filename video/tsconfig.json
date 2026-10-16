@@ -1,0 +1,10 @@
+{
+  "extends": "@motion-canvas/2d/tsconfig.project.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}

@@ -12,3 +12,7 @@ npm-debug.log*
 .DS_Store
 .vscode/
 .idea/
+
+# Видео: кадры рендера и промежуточные файлы
+video/output/
+video/ffmpeg2pass-*.log

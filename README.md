@@ -52,6 +52,12 @@ Node.js: 20.9 или новее (рекомендуется 22, см. `.nvmrc`).
 - старые адреса `/politika-konfidencialnosti` и `/soglasie-na-obrabotku` — постоянный редирект (308)
 - `/robots.txt`, `/sitemap.xml`, страница 404
 
+## Видео на главной
+
+Ролик о компании собран в Motion Canvas — отдельный проект в папке `video/` (см. `video/README.md`).
+Сайт использует только готовые файлы из `public/video/` и расшифровку `src/content/video-transcript.json`;
+настройки показа — `src/config/video.ts`. Видео загружается с того же сервера, без сторонних сервисов.
+
 ## Переменные окружения
 
 См. `.env.example`. Кратко:
