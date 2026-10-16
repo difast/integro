@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { company } from "@/config/company";
 import { audiences, principles } from "@/config/content";
-import { legalDocuments } from "@/config/legal";
 import { services } from "@/config/services";
-import { organizationDetails } from "@/lib/organization";
 import { getSiteUrl } from "@/lib/site";
 import { ButtonLink } from "@/components/ui/Button";
 import { Section } from "@/components/ui/Section";
@@ -16,16 +14,19 @@ export const metadata: Metadata = {
   alternates: getSiteUrl() ? { canonical: "/" } : undefined,
 };
 
-const heroDetails = ["ОГРН", "ИНН", "Юридический адрес", "Часы связи"];
+const quickActions = [
+  { title: "Заказать оценку", note: "отчёт об оценке", href: "/kontakty?usluga=ocenka#zayavka", tone: "navy" },
+  { title: "Судебная экспертиза", note: "по определению суда", href: "/uslugi/sudebnaya-ekspertiza", tone: "accent" },
+  { title: "Порядок работы", note: "от обращения до результата", href: "/poryadok-raboty", tone: "accent" },
+  { title: "Документы", note: "что подготовить", href: "/poryadok-raboty#dokumenty", tone: "navy" },
+] as const;
 
 export default function HomePage() {
-  const details = organizationDetails().filter((row) => heroDetails.includes(row.label));
-
   return (
     <>
       <section aria-labelledby="hero-title" className="border-b border-line">
         <div className="container-page grid gap-12 py-14 sm:py-20 lg:grid-cols-12 lg:gap-8 lg:py-24">
-          <div className="lg:col-span-8 lg:pr-8">
+          <div className="lg:col-span-7 lg:pr-8">
             <p className="label">
               <span className="label-index">—</span>
               {company.legalName}
@@ -51,22 +52,30 @@ export default function HomePage() {
             </div>
           </div>
 
-          <aside aria-labelledby="hero-details" className="lg:col-span-4 lg:border-l lg:border-line lg:pl-8">
-            <h2 id="hero-details" className="label">
-              Сведения об организации
-            </h2>
-            <dl className="mt-5 border-t border-line">
-              {details.map((row) => (
-                <div key={row.label} className="border-b border-line py-3.5">
-                  <dt className="text-[0.8125rem] text-muted">{row.label}</dt>
-                  <dd className="mt-0.5 text-[0.9375rem] font-medium text-ink">{row.value}</dd>
-                </div>
+          <nav aria-label="Быстрые действия" className="lg:col-span-5 lg:self-center">
+            <ul className="grid grid-cols-2 gap-2 sm:gap-3">
+              {quickActions.map((action) => (
+                <li key={action.href}>
+                  <Link
+                    href={action.href}
+                    className={`group flex aspect-[4/3] min-h-[128px] flex-col justify-between p-4 text-white transition-colors sm:p-5 ${
+                      action.tone === "navy" ? "bg-navy-900 hover:bg-navy-800" : "bg-accent hover:bg-accent-hover"
+                    }`}
+                  >
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      strokeWidth={1.75}
+                      className="h-5 w-5 self-end opacity-70 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                    />
+                    <span>
+                      <span className="block text-[1rem] leading-snug font-semibold sm:text-[1.0625rem]">{action.title}</span>
+                      <span className="mt-1 block text-[0.8125rem] text-white/75">{action.note}</span>
+                    </span>
+                  </Link>
+                </li>
               ))}
-            </dl>
-            <Link href={legalDocuments.organization.href} className="text-link mt-5 inline-block text-[0.9375rem]">
-              Все сведения
-            </Link>
-          </aside>
+            </ul>
+          </nav>
         </div>
       </section>
 
