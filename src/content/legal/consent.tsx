@@ -9,6 +9,7 @@ import { operatorFullDescription } from "@/lib/organization";
  */
 export function ConsentBody() {
   const address = company.requisites.legalAddress;
+  const email = company.contacts.email;
 
   return (
     <div className="space-y-4">
@@ -39,7 +40,8 @@ export function ConsentBody() {
       </p>
       <p>
         <strong className="font-semibold text-ink">Отзыв согласия:</strong> согласие может быть отозвано письменным
-        заявлением, направленным оператору{address ? ` по адресу: ${address}` : ""}. Отзыв не влияет на
+        заявлением, направленным оператору{address ? ` по адресу: ${address}` : ""}
+        {email ? `, или сообщением на адрес электронной почты ${email}` : ""}. Отзыв не влияет на
         правомерность обработки, осуществлённой до его получения. После отзыва оператор вправе продолжить обработку
         без согласия только при наличии иных оснований, предусмотренных Федеральным законом от 27.07.2006 № 152-ФЗ
         «О персональных данных».

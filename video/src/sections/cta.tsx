@@ -46,7 +46,7 @@ export function* cta(root: Node): ThreadGenerator {
       </Rect>
       <Txt
         ref={hint}
-        text={"на сайте, в разделе «Контакты»"}
+        text={"intsoftholding.ru  ·  раздел «Контакты»"}
         fontFamily={FONT}
         fontWeight={400}
         fontSize={30}

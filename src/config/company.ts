@@ -75,10 +75,10 @@ export const company: Company = {
   legalName: "ООО «Интегро»",
   fullLegalName: "Общество с ограниченной ответственностью «Интегро»",
   tagline: "Оценка и судебная экспертиза",
-  siteUrl: null,
+  siteUrl: "https://intsoftholding.ru",
   contacts: {
     phone: null,
-    email: null,
+    email: "info@intsoftholding.ru",
     officeAddress: null,
     workingHours: "Ежедневно с 10:00 до 20:00 по московскому времени",
   },

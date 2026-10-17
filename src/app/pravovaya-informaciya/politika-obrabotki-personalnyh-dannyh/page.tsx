@@ -39,6 +39,7 @@ function PurposeBlock({
 export default function PrivacyPolicyPage() {
   const siteUrl = getSiteUrl();
   const { ogrn, inn, kpp, legalAddress } = company.requisites;
+  const { email } = company.contacts;
   const siteName = siteUrl ? `сайт ${siteUrl.replace(/^https?:\/\//, "")}` : "сайт, на котором размещена настоящая Политика";
 
   const sections: LegalSectionData[] = [
@@ -89,6 +90,7 @@ export default function PrivacyPolicyPage() {
               ...(inn ? [{ label: "ИНН", value: inn }] : []),
               ...(kpp ? [{ label: "КПП", value: kpp }] : []),
               ...(legalAddress ? [{ label: "Адрес", value: legalAddress }] : []),
+              ...(email ? [{ label: "Электронная почта", value: email }] : []),
             ]}
           />
           <p>
@@ -412,16 +414,31 @@ export default function PrivacyPolicyPage() {
       content: (
         <>
           <Clause n="11.1.">
-            <p>
-              Запросы, требования и отзыв согласия направляются Оператору в письменной форме
+            <p>Запросы, требования и отзыв согласия направляются Оператору:</p>
+            <Items>
               {legalAddress ? (
-                <>
-                  {" "}
-                  по адресу: <span className="font-medium text-ink">{legalAddress}</span>
-                </>
+                <li>
+                  в письменной форме по адресу: <span className="font-medium text-ink">{legalAddress}</span>;
+                </li>
               ) : null}
-              .
-            </p>
+              {email ? (
+                <li>
+                  в форме электронного документа, подписанного электронной подписью в соответствии с
+                  законодательством Российской Федерации, на адрес электронной почты{" "}
+                  <a href={`mailto:${email}`} className="text-link">
+                    {email}
+                  </a>
+                  .
+                </li>
+              ) : null}
+            </Items>
+            {email ? (
+              <p>
+                Отзыв согласия на обработку персональных данных, полученного через форму на Сайте, также может быть
+                направлен на указанный адрес электронной почты с того адреса или с указанием того номера телефона,
+                которые были указаны в заявке.
+              </p>
+            ) : null}
           </Clause>
           <Clause n="11.2.">
             <p>В соответствии с частью 3 статьи 14 Закона о персональных данных запрос должен содержать:</p>

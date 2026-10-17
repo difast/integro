@@ -30,7 +30,11 @@ export function Clause({ n, children }: { n: string; children: ReactNode }) {
 
 /** Маркированный список внутри пункта. */
 export function Items({ children }: { children: ReactNode }) {
-  return <ul className="space-y-2 [&>li]:grid [&>li]:grid-cols-[1rem_minmax(0,1fr)] [&>li]:before:text-accent [&>li]:before:content-['—']">{children}</ul>;
+  return (
+    <ul className="space-y-2 [&>li]:relative [&>li]:pl-6 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:text-accent [&>li]:before:content-['—']">
+      {children}
+    </ul>
+  );
 }
 
 /** Блок «название — значение» внутри документа. */
