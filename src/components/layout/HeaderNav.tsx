@@ -14,8 +14,8 @@ export function DesktopNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Основная навигация" className="hidden h-full lg:block">
-      <ul className="flex h-full items-stretch gap-8">
+    <nav aria-label="Основная навигация" className="h-full">
+      <ul className="flex h-full items-stretch gap-9">
         {items.map((item) => {
           const active = isActive(pathname, item.href);
           return (
@@ -23,8 +23,8 @@ export function DesktopNav({ items }: { items: NavItem[] }) {
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex items-center text-[0.9375rem] font-medium transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:transition-colors ${
-                  active ? "text-ink after:bg-accent" : "text-body after:bg-transparent hover:text-ink hover:after:bg-line-strong"
+                className={`relative flex items-center text-[1rem] transition-colors after:absolute after:inset-x-0 after:-bottom-px after:h-[2px] after:transition-colors ${
+                  active ? "font-medium text-ink after:bg-bronze" : "text-body after:bg-transparent hover:text-ink hover:after:bg-line-strong"
                 }`}
               >
                 {item.label}
@@ -39,12 +39,13 @@ export function DesktopNav({ items }: { items: NavItem[] }) {
 
 type MobileMenuProps = {
   items: NavItem[];
+  audiences: NavItem[];
   phone: string | null;
   email: string | null;
   workingHours: string | null;
 };
 
-export function MobileMenu({ items, phone, email, workingHours }: MobileMenuProps) {
+export function MobileMenu({ items, audiences, phone, email, workingHours }: MobileMenuProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const panelId = useId();
@@ -71,7 +72,7 @@ export function MobileMenu({ items, phone, email, workingHours }: MobileMenuProp
   }, [open]);
 
   const linkClass =
-    "flex items-center justify-between py-4 text-[1.125rem] font-medium text-ink aria-[current=page]:text-accent";
+    "flex items-center justify-between py-4 text-[1.125rem] font-medium text-ink aria-[current=page]:text-bronze-deep";
 
   return (
     <div className="lg:hidden">
@@ -81,7 +82,7 @@ export function MobileMenu({ items, phone, email, workingHours }: MobileMenuProp
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? "Закрыть меню" : "Открыть меню"}
-        className="inline-flex h-11 w-11 items-center justify-center rounded-[2px] border border-line-strong text-ink transition-colors hover:border-ink"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border border-line-strong text-ink transition-colors hover:border-dark"
       >
         {open ? <X aria-hidden="true" className="h-5 w-5" /> : <Menu aria-hidden="true" className="h-5 w-5" />}
       </button>
@@ -89,7 +90,7 @@ export function MobileMenu({ items, phone, email, workingHours }: MobileMenuProp
       <div
         id={panelId}
         hidden={!open}
-        className="fixed inset-x-0 top-[72px] bottom-0 z-40 overflow-y-auto border-t border-line bg-white"
+        className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto border-t border-line bg-white"
       >
         <nav aria-label="Мобильная навигация" className="container-page py-4">
           <ul className="divide-y divide-line border-b border-line">
@@ -110,28 +111,37 @@ export function MobileMenu({ items, phone, email, workingHours }: MobileMenuProp
               </li>
             ))}
           </ul>
-          <div className="mt-8 space-y-5">
+          <p className="mt-6 text-[0.8125rem] font-medium text-muted">Услуги по типу заказчика</p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {audiences.map((a) => (
+              <li key={a.href}>
+                <Link
+                  href={a.href}
+                  className="inline-flex rounded-full border border-line-strong px-3.5 py-2 text-[0.875rem] text-ink"
+                >
+                  {a.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 space-y-4">
             <Link
               href="/kontakty#zayavka"
-              className="flex min-h-12 w-full items-center justify-center rounded-[2px] bg-navy-900 px-6 font-medium text-white hover:bg-navy-800"
+              className="flex min-h-12 w-full items-center justify-center rounded-[var(--radius-control)] bg-dark px-6 font-medium text-white hover:bg-dark-800"
             >
               Оставить заявку
             </Link>
-            {workingHours ? (
-              <p className="text-[0.875rem] text-muted">
-                Часы связи: {workingHours}
-              </p>
-            ) : null}
             {phone ? (
               <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="block text-lg font-medium text-ink">
                 {phone}
               </a>
             ) : null}
             {email ? (
-              <a href={`mailto:${email}`} className="block text-ink underline underline-offset-4">
+              <a href={`mailto:${email}`} className="block text-ink underline decoration-bronze underline-offset-4">
                 {email}
               </a>
             ) : null}
+            {workingHours ? <p className="text-[0.875rem] text-muted">{workingHours}</p> : null}
           </div>
         </nav>
       </div>

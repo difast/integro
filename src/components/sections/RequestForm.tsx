@@ -24,12 +24,12 @@ type RequestFormProps = {
 };
 
 const inputClass =
-  "mt-2 block w-full rounded-[2px] border border-line-strong bg-white px-4 py-3 text-base text-ink placeholder:text-muted/70 transition-colors focus:border-navy-900 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-navy-900 aria-[invalid=true]:border-accent disabled:bg-paper disabled:text-muted";
+  "mt-2 block w-full rounded-[var(--radius-control)] border border-line-strong bg-white px-4 py-3 text-base text-ink placeholder:text-muted/70 transition-colors focus:border-dark focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-dark aria-[invalid=true]:border-danger disabled:bg-mist disabled:text-muted";
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
-    <p id={id} className="mt-2 text-[0.875rem] font-medium text-accent">
+    <p id={id} className="mt-2 text-[0.875rem] font-medium text-danger">
       {message}
     </p>
   );
@@ -75,7 +75,7 @@ export function RequestForm({
     <form ref={formRef} action={submit} noValidate className="space-y-6" aria-describedby="form-status">
       <div ref={statusRef} id="form-status" tabIndex={-1} aria-live="polite" className="outline-none">
         {!enabled ? (
-          <div className="flex gap-3 border-l-[3px] border-navy-900 bg-paper p-4 text-[0.9375rem] leading-relaxed text-ink">
+          <div className="flex gap-3 rounded-[var(--radius-control)] border-l-[3px] border-bronze bg-mist p-4 text-[0.9375rem] leading-relaxed text-ink">
             <AlertCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
               <p className="font-semibold">Приём заявок через сайт пока не подключён.</p>
@@ -91,14 +91,14 @@ export function RequestForm({
           </div>
         ) : null}
         {state.status === "success" ? (
-          <div className="flex gap-3 border-l-[3px] border-emerald-700 bg-emerald-50 p-4 text-emerald-950">
+          <div className="flex gap-3 rounded-[var(--radius-control)] border-l-[3px] border-dark bg-mist p-4 text-ink">
             <CheckCircle2 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
             <p className="font-medium">{state.message}</p>
           </div>
         ) : null}
         {state.status === "error" && state.message ? (
-          <div role="alert" className="flex gap-3 border-l-[3px] border-accent bg-accent-soft p-4 text-ink">
-            <AlertCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+          <div role="alert" className="flex gap-3 rounded-[var(--radius-control)] border-l-[3px] border-danger bg-mist p-4 text-ink">
+            <AlertCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
             <p className="font-medium">{state.message}</p>
           </div>
         ) : null}
@@ -109,7 +109,7 @@ export function RequestForm({
 
         <div>
           <label htmlFor="name" className="text-[0.9375rem] font-medium text-ink">
-            Как к вам обращаться <span className="text-accent" aria-hidden="true">*</span>
+            Как к вам обращаться <span className="text-bronze-deep" aria-hidden="true">*</span>
           </label>
           <input
             id="name"
@@ -192,7 +192,7 @@ export function RequestForm({
 
         <div>
           <label htmlFor="message" className="text-[0.9375rem] font-medium text-ink">
-            Опишите задачу <span className="text-accent" aria-hidden="true">*</span>
+            Опишите задачу <span className="text-bronze-deep" aria-hidden="true">*</span>
           </label>
           <textarea
             id="message"
@@ -227,18 +227,18 @@ export function RequestForm({
               name="consent"
               type="checkbox"
               required
-              className="mt-0.5 h-5 w-5 shrink-0 rounded-none accent-[var(--color-navy-900)]"
+              className="mt-0.5 h-5 w-5 shrink-0 rounded-none accent-[var(--color-dark)]"
               {...errorProps("consent")}
             />
             <label htmlFor="consent" className="text-[0.9375rem] leading-relaxed text-ink">
               Даю согласие {company.legalName} на обработку моих персональных данных на условиях, изложенных в тексте
-              согласия ниже. <span className="text-accent" aria-hidden="true">*</span>
+              согласия ниже. <span className="text-bronze-deep" aria-hidden="true">*</span>
             </label>
           </div>
           <FieldError id="consent-error" message={errors.consent} />
 
           <details className="group mt-4 ml-8 border-l-2 border-line pl-4">
-            <summary className="cursor-pointer list-none text-[0.875rem] font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-accent [&::-webkit-details-marker]:hidden">
+            <summary className="cursor-pointer list-none text-[0.875rem] font-medium text-ink underline decoration-bronze underline-offset-4 hover:text-bronze-deep [&::-webkit-details-marker]:hidden">
               <span className="group-open:hidden">Показать текст согласия</span>
               <span className="hidden group-open:inline">Скрыть текст согласия</span>
             </summary>

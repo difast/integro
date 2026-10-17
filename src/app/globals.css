@@ -1,9 +1,18 @@
 @import "tailwindcss";
 
 /*
- * Дизайн-система: тёмно-синяя основа, бордовый — только для точечных акцентов
- * (номера разделов, активный пункт меню, обязательные поля). Прямые углы,
- * тонкие линейки вместо карточек, одна гарнитура — IBM Plex Sans.
+ * Дизайн-система ООО «Интегро».
+ *
+ * Палитра (все цвета — только через токены ниже):
+ *   mist    #E8EDF1 — основной фон сайта
+ *   dark    #263746 — основной тёмный: заголовки, тёмные блоки, кнопки
+ *   white   #FFFFFF — карточки, формы, статьи, светлые поверхности
+ *   steel   #727B80 — линии и крупный вторичный текст
+ *   bronze  #B49A72 — акцент: тонкие линии, маркеры, детали (не для мелкого текста на светлом)
+ *
+ * Производные оттенки получены из тех же цветов и нужны для контраста
+ * (muted — затемнённый steel для мелкого текста, on-dark — вторичный текст
+ * на тёмном). danger — только для сообщений об ошибках в формах.
  */
 
 @theme inline {
@@ -11,23 +20,33 @@
 }
 
 @theme {
-  --color-ink: #0d1730;
-  --color-body: #29324a;
-  --color-muted: #5b6478;
-  --color-line: #dde1e8;
-  --color-line-strong: #c3c9d4;
-  --color-paper: #f5f6f8;
+  --color-mist: #e8edf1;
+  --color-mist-deep: #dce3e9;
+  --color-dark: #263746;
+  --color-dark-800: #2f4355;
+  --color-dark-950: #1d2b37;
+  --color-steel: #727b80;
+  --color-bronze: #b49a72;
+  --color-bronze-deep: #8e7754;
+  --color-bronze-soft: #f1ece4;
 
-  --color-navy-950: #0a1430;
-  --color-navy-900: #111f47;
-  --color-navy-800: #1a2b5a;
-  --color-navy-700: #263b74;
-  --color-navy-300: #9aa6c4;
-  --color-navy-100: #e4e8f2;
+  --color-ink: #263746;
+  --color-body: #33434f;
+  --color-muted: #5e676c;
+  --color-on-dark: #b9c3cb;
+  --color-line: #d3dae0;
+  --color-line-strong: #a9b2b8;
+  --color-danger: #a3473a;
 
-  --color-accent: #a51c2c;
-  --color-accent-hover: #8a1624;
-  --color-accent-soft: #f8ecee;
+  /* Совместимые имена для блока с видео (разметка блока не меняется). */
+  --color-navy-950: #1d2b37;
+  --color-navy-900: #263746;
+  --color-navy-300: #b9c3cb;
+  --color-accent: #b49a72;
+
+  --radius-panel: 20px;
+  --radius-card: 14px;
+  --radius-control: 10px;
 }
 
 @layer base {
@@ -43,7 +62,7 @@
   }
 
   body {
-    @apply bg-white font-sans text-[1rem] leading-[1.65] text-body antialiased;
+    @apply bg-mist font-sans text-[1rem] leading-[1.65] text-body antialiased;
     font-feature-settings: "kern", "liga";
   }
 
@@ -51,7 +70,7 @@
   h2,
   h3,
   h4 {
-    @apply font-semibold text-ink;
+    @apply font-medium text-ink;
     text-wrap: balance;
   }
 
@@ -62,28 +81,24 @@
   }
 
   ::selection {
-    background: var(--color-navy-100);
+    background: var(--color-bronze-soft);
     color: var(--color-ink);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-navy-700);
+    outline: 2px solid var(--color-dark);
     outline-offset: 3px;
   }
 }
 
 @layer components {
   .container-page {
-    @apply mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-[1240px] px-4 sm:px-6 lg:px-8;
   }
 
-  /* Подпись раздела: «01 — Услуги» */
+  /* Небольшая подпись над заголовком. */
   .label {
-    @apply text-[0.8125rem] font-medium tracking-[0.08em] text-muted uppercase;
-  }
-
-  .label-index {
-    @apply mr-3 text-accent tabular-nums;
+    @apply text-[0.8125rem] font-medium tracking-[0.04em] text-muted;
   }
 
   .h-page {
@@ -91,7 +106,7 @@
   }
 
   .h-section {
-    @apply text-[1.625rem] leading-[1.2] tracking-[-0.01em] sm:text-[2rem];
+    @apply text-[1.75rem] leading-[1.18] tracking-[-0.012em] sm:text-[2.25rem];
   }
 
   .lead {
@@ -103,7 +118,15 @@
   }
 
   .text-link {
-    @apply text-ink underline decoration-line-strong decoration-1 underline-offset-[5px] transition-colors hover:decoration-accent;
+    @apply text-ink underline decoration-bronze decoration-1 underline-offset-[5px] transition-colors hover:text-bronze-deep;
+  }
+
+  .surface {
+    @apply rounded-[var(--radius-card)] bg-white;
+  }
+
+  .panel {
+    @apply rounded-[var(--radius-panel)];
   }
 }
 
@@ -116,13 +139,17 @@
     @apply mt-5;
   }
   .article-body h2 {
-    @apply mt-14 scroll-mt-28 border-t border-ink pt-6 text-[1.5rem] leading-snug font-semibold text-ink sm:text-[1.625rem];
+    @apply mt-14 scroll-mt-28 text-[1.5rem] leading-snug font-medium text-ink sm:text-[1.6875rem];
+  }
+  .article-body h2::before {
+    content: "";
+    @apply mb-5 block h-[2px] w-10 bg-bronze;
   }
   .article-body h3 {
     @apply mt-9 scroll-mt-28 text-[1.1875rem] leading-snug font-semibold text-ink;
   }
   .article-body a {
-    @apply text-ink underline decoration-line-strong decoration-1 underline-offset-[5px] transition-colors hover:decoration-accent;
+    @apply text-ink underline decoration-bronze decoration-1 underline-offset-[5px] transition-colors hover:text-bronze-deep;
   }
   .article-body strong {
     @apply font-semibold text-ink;
@@ -138,14 +165,14 @@
     @apply relative;
   }
   .article-body ul > li::before {
-    content: "—";
-    @apply absolute -left-6 text-accent;
+    content: "";
+    @apply absolute top-[0.8em] -left-5 h-[2px] w-2.5 bg-bronze;
   }
   .article-body ol {
-    @apply list-decimal marker:font-medium marker:text-accent;
+    @apply list-decimal marker:font-medium marker:text-muted;
   }
   .article-body blockquote {
-    @apply border-l-[3px] border-navy-900 bg-paper px-5 py-4 text-ink;
+    @apply rounded-[var(--radius-control)] border-l-[3px] border-bronze bg-mist px-5 py-4 text-ink;
   }
   .article-body blockquote > p {
     @apply m-0;
@@ -158,7 +185,7 @@
     @apply min-w-[9.5rem] border-b border-line px-3 py-3 text-left align-top first:min-w-[7.5rem] first:pl-0;
   }
   .article-body th {
-    @apply border-b-2 border-ink font-semibold text-ink;
+    @apply border-b-2 border-dark font-semibold text-ink;
   }
   .article-body td:first-child {
     @apply font-medium text-ink;

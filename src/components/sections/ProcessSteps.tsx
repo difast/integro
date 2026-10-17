@@ -1,18 +1,19 @@
 import { processSteps } from "@/config/content";
 
-export function ProcessSteps() {
+/** Этапы работы: здесь нумерация действительно передаёт последовательность. */
+export function ProcessSteps({ tone = "light" }: { tone?: "light" | "dark" }) {
+  const dark = tone === "dark";
   return (
-    <ol className="border-t border-line">
+    <ol className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
       {processSteps.map((step, index) => (
-        <li
-          key={step.title}
-          className="grid gap-2 border-b border-line py-6 sm:grid-cols-[4rem_minmax(0,14rem)_1fr] sm:gap-6 lg:py-7"
-        >
-          <span className="text-[0.875rem] font-medium text-accent tabular-nums">
+        <li key={step.title} className="relative pt-8">
+          <span aria-hidden="true" className={`absolute inset-x-0 top-0 h-px ${dark ? "bg-white/15" : "bg-line-strong"}`} />
+          <span aria-hidden="true" className="absolute top-0 left-0 h-[2px] w-10 bg-bronze" />
+          <span className={`text-[2rem] leading-none font-light tabular-nums ${dark ? "text-bronze" : "text-steel"}`}>
             {String(index + 1).padStart(2, "0")}
           </span>
-          <h3 className="text-[1.0625rem] leading-snug">{step.title}</h3>
-          <p className="max-w-[40rem] text-muted">{step.text}</p>
+          <h3 className={`mt-4 text-[1.125rem] ${dark ? "text-white" : ""}`}>{step.title}</h3>
+          <p className={`mt-2 text-[0.9375rem] leading-relaxed ${dark ? "text-on-dark" : "text-muted"}`}>{step.text}</p>
         </li>
       ))}
     </ol>

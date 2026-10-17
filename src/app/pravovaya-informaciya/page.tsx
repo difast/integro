@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { company } from "@/config/company";
 import { legalDocumentList, legalIndexPath } from "@/config/legal";
 import { pageMetadata } from "@/lib/metadata";
@@ -20,24 +21,28 @@ export default function LegalIndexPage() {
         lead="Официальные сведения об организации и документы об обработке персональных данных на сайте."
         meta={<>Редакция документов от {company.legalRevisionDate}</>}
       />
-      <section aria-label="Документы" className="container-page py-12 lg:py-20">
-        <ol className="border-t border-ink">
-          {legalDocumentList.map((doc, index) => (
-            <li key={doc.href} className="border-b border-line">
-              <Link href={doc.href} className="group grid gap-3 py-8 lg:grid-cols-12 lg:gap-8">
-                <span className="text-[0.875rem] font-medium text-accent tabular-nums lg:col-span-3">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <span className="lg:col-span-9">
-                  <span className="block text-[1.25rem] font-semibold text-ink group-hover:underline group-hover:decoration-accent group-hover:underline-offset-[5px] sm:text-[1.375rem]">
+      <section aria-label="Документы" className="container-page mt-10 lg:mt-14">
+        <ul className="grid gap-4 md:grid-cols-3">
+          {legalDocumentList.map((doc) => (
+            <li key={doc.href}>
+              <Link
+                href={doc.href}
+                className="group flex h-full flex-col justify-between gap-8 rounded-[var(--radius-card)] bg-white p-7"
+              >
+                <span>
+                  <span aria-hidden="true" className="block h-[2px] w-8 bg-bronze" />
+                  <span className="mt-5 block text-[1.25rem] leading-snug font-medium text-ink group-hover:underline group-hover:decoration-bronze group-hover:underline-offset-[5px]">
                     {doc.title}
                   </span>
-                  <span className="mt-2 block max-w-[40rem] text-muted">{doc.description}</span>
+                  <span className="mt-3 block text-[0.9375rem] leading-relaxed text-muted">{doc.description}</span>
+                </span>
+                <span className="inline-flex h-11 w-11 items-center justify-center self-end rounded-full bg-mist text-ink transition-colors group-hover:bg-dark group-hover:text-white">
+                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
                 </span>
               </Link>
             </li>
           ))}
-        </ol>
+        </ul>
       </section>
     </>
   );

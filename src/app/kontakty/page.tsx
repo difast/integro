@@ -37,17 +37,17 @@ export default async function ContactsPage({ searchParams }: Props) {
         lead="Опишите задачу — после предварительного анализа сообщим, возможно ли её решение, какие материалы потребуются, а также сроки и стоимость работ."
       />
 
-      <div className="container-page grid gap-14 py-14 lg:grid-cols-12 lg:gap-8 lg:py-20">
-        <div className="space-y-12 lg:col-span-4">
+      <div className="container-page mt-10 grid gap-4 lg:mt-14 lg:grid-cols-12">
+        <div className="space-y-10 self-start rounded-[var(--radius-card)] bg-white p-6 sm:p-8 lg:col-span-4">
           <section aria-labelledby="contacts-title">
-            <h2 id="contacts-title" className="label">
+            <h2 id="contacts-title" className="text-[0.875rem] font-medium text-muted">
               Связь
             </h2>
             <ContactList className="mt-5" />
           </section>
 
           <section aria-labelledby="how-title">
-            <h2 id="how-title" className="label">
+            <h2 id="how-title" className="text-[0.875rem] font-medium text-muted">
               Что указать в заявке
             </h2>
             <ul className="mt-5 space-y-3 border-t border-line pt-5 text-[0.9375rem] leading-relaxed">
@@ -57,9 +57,7 @@ export default async function ContactsPage({ searchParams }: Props) {
                 "Для судебной экспертизы — суд, номер дела и предполагаемые вопросы",
               ].map((item) => (
                 <li key={item} className="grid grid-cols-[1rem_1fr]">
-                  <span aria-hidden="true" className="text-accent">
-                    —
-                  </span>
+                  <span aria-hidden="true" className="mt-2.5 h-[2px] w-2.5 bg-bronze" />
                   {item}
                 </li>
               ))}
@@ -67,7 +65,7 @@ export default async function ContactsPage({ searchParams }: Props) {
           </section>
 
           <section aria-labelledby="org-title">
-            <h2 id="org-title" className="label">
+            <h2 id="org-title" className="text-[0.875rem] font-medium text-muted">
               Организация
             </h2>
             <dl className="mt-5 border-t border-line text-[0.9375rem]">
@@ -87,13 +85,13 @@ export default async function ContactsPage({ searchParams }: Props) {
         <section
           id="zayavka"
           aria-labelledby="form-title"
-          className="scroll-mt-28 border-t-[3px] border-navy-900 bg-paper p-6 sm:p-10 lg:col-span-7 lg:col-start-6"
+          className="panel scroll-mt-10 bg-white p-6 sm:p-10 lg:col-span-8"
         >
           <h2 id="form-title" className="h-section">
             Заявка
           </h2>
           <p className="mt-3 mb-8 text-[0.9375rem] text-muted">
-            Поля, отмеченные <span className="text-accent">*</span>, обязательны.
+            Поля, отмеченные <span className="text-bronze-deep">*</span>, обязательны.
           </p>
           <RequestForm
             services={services.map((service) => ({ value: service.slug, label: service.title }))}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import { clientLinks } from "@/config/content";
 import { audienceLabels, getServiceDetails, type AudienceKey } from "@/config/service-details";
@@ -7,6 +8,7 @@ import { pageMetadata } from "@/lib/metadata";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CtaBand } from "@/components/sections/CtaBand";
 import { ServicesBrowser } from "@/components/sections/ServicesBrowser";
+import { SectionHead } from "@/components/ui/SectionHead";
 
 export const metadata = pageMetadata({
   title: "Услуги",
@@ -33,10 +35,10 @@ export default function ServicesPage() {
         lead="Оценка стоимости, судебная экспертиза и экспертные исследования. Для каждого направления — свой итоговый документ и порядок работы."
       />
 
-      <div className="container-page grid gap-12 py-12 lg:grid-cols-12 lg:gap-8 lg:py-20">
-        <aside className="order-2 space-y-10 lg:order-1 lg:col-span-3">
+      <div className="container-page mt-10 grid gap-10 lg:mt-14 lg:grid-cols-12 lg:gap-8">
+        <aside className="order-2 min-w-0 space-y-8 self-start rounded-[var(--radius-card)] bg-white p-6 lg:order-1 lg:col-span-3">
           <nav aria-labelledby="dir-title">
-            <h2 id="dir-title" className="label">
+            <h2 id="dir-title" className="text-[0.875rem] font-medium text-muted">
               Направления
             </h2>
             <ul className="mt-4 border-t border-line">
@@ -46,17 +48,17 @@ export default function ServicesPage() {
                     href={`/uslugi/${service.slug}`}
                     className="group flex items-center justify-between gap-3 py-3.5 font-medium text-ink"
                   >
-                    <span className="group-hover:underline group-hover:decoration-accent group-hover:underline-offset-4">
+                    <span className="group-hover:underline group-hover:decoration-bronze group-hover:underline-offset-4">
                       {service.title}
                     </span>
-                    <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-muted group-hover:text-accent" />
+                    <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-muted group-hover:text-bronze-deep" />
                   </Link>
                 </li>
               ))}
             </ul>
           </nav>
           <nav aria-labelledby="clients-title">
-            <h2 id="clients-title" className="label">
+            <h2 id="clients-title" className="text-[0.875rem] font-medium text-muted">
               Клиентам
             </h2>
             <ul className="mt-4 space-y-3 border-t border-line pt-4 text-[0.9375rem]">
@@ -71,23 +73,24 @@ export default function ServicesPage() {
           </nav>
         </aside>
 
-        <section aria-label="Каталог услуг" className="order-1 lg:order-2 lg:col-span-9">
-          <ServicesBrowser services={items} audiences={audiences} />
+        <section aria-label="Каталог услуг" className="order-1 min-w-0 lg:order-2 lg:col-span-9">
+          <Suspense fallback={null}>
+            <ServicesBrowser services={items} audiences={audiences} />
+          </Suspense>
         </section>
       </div>
 
-      <section aria-labelledby="compare-title" className="bg-paper">
-        <div className="container-page py-16 lg:py-20">
-          <div className="grid gap-6 border-t border-ink pt-6 lg:grid-cols-12 lg:gap-8">
-            <p className="label lg:col-span-3">Как выбрать</p>
-            <div className="lg:col-span-9">
-              <h2 id="compare-title" className="h-section">
-                Чем отличаются направления
-              </h2>
-              <div className="mt-8 overflow-x-auto">
+      <section aria-labelledby="compare-title" className="container-page mt-20 lg:mt-24">
+        <div className="panel bg-white px-6 py-10 sm:px-10 lg:px-14 lg:py-14">
+          <div className="grid gap-8 lg:grid-cols-12">
+            <div className="min-w-0 lg:col-span-4">
+              <SectionHead id="compare-title" eyebrow="Как выбрать" title="Чем отличаются направления" />
+            </div>
+            <div className="min-w-0 lg:col-span-8">
+              <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] border-collapse text-left text-[0.9375rem]">
                   <thead>
-                    <tr className="border-b-2 border-ink">
+                    <tr className="border-b-2 border-dark">
                       <th scope="col" className="py-3 pr-4 font-semibold text-ink">
                         Направление
                       </th>

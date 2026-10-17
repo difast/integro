@@ -10,8 +10,9 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <section className="container-page py-20 lg:py-32">
-      <p className="label">Ошибка 404</p>
+    <section className="container-page pt-6 sm:pt-8">
+      <div className="panel bg-white px-6 py-14 sm:px-12 lg:px-16 lg:py-20">
+      <p className="flex items-center gap-3 text-[0.875rem] font-medium text-muted"><span aria-hidden="true" className="h-[2px] w-8 bg-bronze" />Ошибка 404</p>
       <h1 className="h-page mt-6 max-w-2xl">
         Страница не найдена
       </h1>
@@ -25,7 +26,7 @@ export default function NotFound() {
           Оставить заявку
         </ButtonLink>
       </div>
-      <nav aria-label="Разделы сайта" className="mt-14 border-t border-ink pt-6">
+      <nav aria-label="Разделы сайта" className="mt-14 border-t border-line pt-6">
         <ul className="flex flex-wrap gap-x-8 gap-y-3">
           {mainNav.map((item) => (
             <li key={item.href}>
@@ -36,6 +37,7 @@ export default function NotFound() {
           ))}
         </ul>
       </nav>
+      </div>
     </section>
   );
 }

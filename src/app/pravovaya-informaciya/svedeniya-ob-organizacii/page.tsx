@@ -23,8 +23,8 @@ export default function OrganizationPage() {
         crumbs={[{ label: "Правовая информация", href: "/pravovaya-informaciya" }, { label: doc.title }]}
         lead="Официальные сведения об организации, через которую заключаются договоры и проводятся расчёты за услуги."
       />
-      <div className="container-page grid gap-12 py-12 lg:grid-cols-12 lg:gap-8 lg:py-20">
-        <section aria-labelledby="details-title" className="lg:col-span-8">
+      <div className="container-page mt-10 grid gap-4 lg:mt-14 lg:grid-cols-12">
+        <section aria-labelledby="details-title" className="panel bg-white p-6 sm:p-10 lg:col-span-8">
           <h2 id="details-title" className="sr-only">
             Реквизиты
           </h2>
@@ -33,8 +33,8 @@ export default function OrganizationPage() {
             <ButtonLink href="/kontakty#zayavka">Оставить заявку</ButtonLink>
           </div>
         </section>
-        <aside aria-labelledby="docs-title" className="lg:col-span-3 lg:col-start-10">
-          <h2 id="docs-title" className="label">
+        <aside aria-labelledby="docs-title" className="self-start rounded-[var(--radius-card)] bg-white p-6 lg:col-span-4">
+          <h2 id="docs-title" className="text-[0.875rem] font-medium text-muted">
             Документы
           </h2>
           <ul className="mt-5 border-t border-line text-[0.9375rem]">

@@ -7,6 +7,7 @@ import { getMetadataBase, getSiteUrl } from "@/lib/site";
 import { ogImage } from "@/lib/metadata";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { CookieNotice } from "@/components/layout/CookieNotice";
 
 // IBM Plex Sans (SIL OFL 1.1), локальные файлы: латиница и кириллица подключаются
 // отдельными начертаниями с unicode-range, без запросов к внешним сервисам.
@@ -59,7 +60,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#111f47",
+  themeColor: "#263746",
   width: "device-width",
   initialScale: 1,
 };
@@ -70,7 +71,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="flex min-h-dvh flex-col">
         <a
           href="#main"
-          className="sr-only z-50 bg-navy-900 px-5 py-3 font-medium text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+          className="sr-only z-50 rounded-[var(--radius-control)] bg-dark px-5 py-3 font-medium text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
         >
           Перейти к содержанию
         </a>
@@ -79,6 +80,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
         <SiteFooter />
+        <CookieNotice />
       </body>
     </html>
   );

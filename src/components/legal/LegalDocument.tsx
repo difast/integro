@@ -31,7 +31,7 @@ export function Clause({ n, children }: { n: string; children: ReactNode }) {
 /** Маркированный список внутри пункта. */
 export function Items({ children }: { children: ReactNode }) {
   return (
-    <ul className="space-y-2 [&>li]:relative [&>li]:pl-6 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:text-accent [&>li]:before:content-['—']">
+    <ul className="space-y-2 [&>li]:relative [&>li]:pl-6 [&>li]:before:absolute [&>li]:before:left-0 [&>li]:before:top-[0.8em] [&>li]:before:h-[2px] [&>li]:before:w-2.5 [&>li]:before:bg-bronze [&>li]:before:content-['']">
       {children}
     </ul>
   );
@@ -76,15 +76,15 @@ export function LegalDocument({ title, lead, sections, showRevision = true }: Le
         meta={showRevision ? <>Редакция от {company.legalRevisionDate}</> : undefined}
       />
 
-      <div className="container-page grid gap-10 py-12 lg:grid-cols-12 lg:gap-8 lg:py-20">
+      <div className="container-page mt-10 grid gap-4 lg:mt-14 lg:grid-cols-12 lg:gap-6">
         <aside className="lg:col-span-3">
-          <details className="group border-y border-line lg:hidden">
+          <details className="group rounded-[var(--radius-card)] bg-white px-5 lg:hidden">
             <summary className="flex cursor-pointer list-none items-center justify-between py-4 font-medium text-ink [&::-webkit-details-marker]:hidden">
               Содержание
-              <span aria-hidden="true" className="text-accent group-open:hidden">
+              <span aria-hidden="true" className="text-bronze-deep group-open:hidden">
                 +
               </span>
-              <span aria-hidden="true" className="hidden text-accent group-open:inline">
+              <span aria-hidden="true" className="hidden text-bronze-deep group-open:inline">
                 −
               </span>
             </summary>
@@ -92,19 +92,19 @@ export function LegalDocument({ title, lead, sections, showRevision = true }: Le
               <Toc sections={sections} />
             </div>
           </details>
-          <nav aria-label="Содержание документа" className="hidden lg:sticky lg:top-28 lg:block">
-            <p className="label">Содержание</p>
+          <nav aria-label="Содержание документа" className="hidden rounded-[var(--radius-card)] bg-white p-6 lg:sticky lg:top-6 lg:block">
+            <p className="text-[0.875rem] font-medium text-muted">Содержание</p>
             <div className="mt-5 border-t border-line pt-5">
               <Toc sections={sections} />
             </div>
           </nav>
         </aside>
 
-        <article className="min-w-0 lg:col-span-8 lg:col-start-5">
+        <article className="panel min-w-0 bg-white px-5 py-8 sm:px-10 sm:py-12 lg:col-span-9">
           {sections.map((section, index) => (
-            <section key={section.id} id={section.id} aria-labelledby={`${section.id}-title`} className="scroll-mt-28 border-t border-ink pt-6 pb-10 first:pt-6 lg:pb-12">
+            <section key={section.id} id={section.id} aria-labelledby={`${section.id}-title`} className="scroll-mt-10 border-t border-line pt-8 pb-10 first:border-t-0 first:pt-0 lg:pb-12">
               <h2 id={`${section.id}-title`} className="text-[1.25rem] leading-snug sm:text-[1.375rem]">
-                <span className="mr-3 text-accent tabular-nums">{index + 1}.</span>
+                <span className="mr-3 text-steel tabular-nums">{index + 1}.</span>
                 {section.title}
               </h2>
               <div className="mt-6 space-y-5 text-[1rem] leading-[1.7] sm:text-[1.0625rem]">{section.content}</div>

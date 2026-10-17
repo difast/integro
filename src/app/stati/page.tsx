@@ -29,7 +29,7 @@ export default function ArticlesPage() {
         crumbs={[{ label: "Статьи" }]}
         lead="Разбираем вопросы, с которыми к нам обращаются: оценка имущества, судебная экспертиза, документы и порядок работы."
       />
-      <section aria-label="Список статей" className="container-page py-12 lg:py-20">
+      <section aria-label="Список статей" className="container-page mt-10 lg:mt-14">
         <ArticlesBrowser
           articles={articles}
           categories={Object.entries(articleCategories).map(([key, label]) => ({ key, label }))}

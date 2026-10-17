@@ -9,6 +9,8 @@ import { pageMetadata } from "@/lib/metadata";
 import { absoluteUrl } from "@/lib/site";
 import { ButtonLink } from "@/components/ui/Button";
 import { ArticleCard } from "@/components/ui/ArticleCard";
+import { SectionHead } from "@/components/ui/SectionHead";
+import { Breadcrumbs } from "@/components/layout/PageHeader";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -63,38 +65,15 @@ export default async function ArticlePage({ params }: Props) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <header className="border-b border-line bg-paper">
-        <div className="container-page pt-8 pb-12 sm:pt-10 lg:pb-16">
-          <nav aria-label="Навигационная цепочка">
-            <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.875rem] text-muted">
-              <li>
-                <Link href="/" className="hover:text-ink">
-                  Главная
-                </Link>
-              </li>
-              <li className="flex items-center gap-2">
-                <span aria-hidden="true" className="text-line-strong">
-                  /
-                </span>
-                <Link href="/stati" className="hover:text-ink">
-                  Статьи
-                </Link>
-              </li>
-              <li className="flex items-center gap-2">
-                <span aria-hidden="true" className="text-line-strong">
-                  /
-                </span>
-                <span aria-current="page" className="text-ink">
-                  {articleCategories[article.category]}
-                </span>
-              </li>
-            </ol>
-          </nav>
-          <div className="mt-10 max-w-[52rem] lg:mt-14">
-            <span className="inline-block border border-line-strong px-2.5 py-1 text-[0.75rem] font-medium tracking-[0.06em] text-muted uppercase">
+      <div className="container-page pt-6 sm:pt-8">
+        <header className="panel bg-white px-5 pt-7 pb-10 sm:px-10 sm:pt-9 sm:pb-12 lg:px-12">
+          <Breadcrumbs crumbs={[{ label: "Статьи", href: "/stati" }, { label: articleCategories[article.category] }]} />
+          <div className="mt-10 max-w-[52rem] lg:mt-12">
+            <span className="inline-flex items-center gap-2 text-[0.875rem] font-medium text-muted">
+              <span aria-hidden="true" className="h-[2px] w-6 bg-bronze" />
               {articleCategories[article.category]}
             </span>
-            <h1 className="mt-6 text-[2rem] leading-[1.15] tracking-[-0.015em] sm:text-[2.5rem] lg:text-[2.875rem]">
+            <h1 className="mt-5 text-[2rem] leading-[1.15] tracking-[-0.015em] sm:text-[2.5rem] lg:text-[2.875rem]">
               {article.title}
             </h1>
             <p className="lead mt-6">{article.description}</p>
@@ -109,23 +88,23 @@ export default async function ArticlePage({ params }: Props) {
                 </span>
               ) : null}
               <span>· {article.readingMinutes} мин чтения</span>
-              {article.draft ? <span className="bg-amber-100 px-1.5 text-amber-900">черновик</span> : null}
+              {article.draft ? <span className="rounded bg-bronze-soft px-1.5 text-bronze-deep">черновик</span> : null}
             </p>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
-      <div className="container-page grid gap-12 py-12 lg:grid-cols-12 lg:gap-8 lg:py-16">
+      <div className="container-page mt-4 grid gap-4 lg:grid-cols-12">
         <aside className="lg:col-span-3">
           {toc.length > 2 ? (
             <>
-              <details className="group border-y border-line lg:hidden">
+              <details className="group rounded-[var(--radius-card)] bg-white px-5 lg:hidden">
                 <summary className="flex cursor-pointer list-none items-center justify-between py-4 font-medium text-ink [&::-webkit-details-marker]:hidden">
                   Содержание
-                  <span aria-hidden="true" className="text-accent group-open:hidden">
+                  <span aria-hidden="true" className="text-bronze-deep group-open:hidden">
                     +
                   </span>
-                  <span aria-hidden="true" className="hidden text-accent group-open:inline">
+                  <span aria-hidden="true" className="hidden text-bronze-deep group-open:inline">
                     −
                   </span>
                 </summary>
@@ -139,8 +118,8 @@ export default async function ArticlePage({ params }: Props) {
                   ))}
                 </ol>
               </details>
-              <nav aria-label="Содержание статьи" className="hidden lg:sticky lg:top-28 lg:block">
-                <p className="label">Содержание</p>
+              <nav aria-label="Содержание статьи" className="hidden rounded-[var(--radius-card)] bg-white p-6 lg:sticky lg:top-6 lg:block">
+                <p className="text-[0.875rem] font-medium text-muted">Содержание</p>
                 <ol className="mt-5 space-y-2.5 border-t border-line pt-5 text-[0.875rem] leading-snug">
                   {toc.map((h) => (
                     <li key={h.id}>
@@ -155,7 +134,7 @@ export default async function ArticlePage({ params }: Props) {
           ) : null}
         </aside>
 
-        <article className="min-w-0 lg:col-span-6">
+        <article className="panel min-w-0 bg-white px-5 py-8 sm:px-10 sm:py-12 lg:col-span-6">
           <div className="article-body" dangerouslySetInnerHTML={{ __html: article.html }} />
           <p className="mt-12 max-w-[68ch] border-t border-line pt-5 text-[0.875rem] leading-relaxed text-muted">
             Материал носит информационный характер и не является юридической консультацией. Порядок действий в
@@ -167,10 +146,10 @@ export default async function ArticlePage({ params }: Props) {
           </Link>
         </article>
 
-        <aside className="space-y-8 lg:col-span-3 lg:sticky lg:top-28 lg:self-start">
+        <aside className="space-y-4 lg:col-span-3 lg:sticky lg:top-6 lg:self-start">
           {services.length > 0 ? (
-            <div>
-              <p className="label">Услуги по теме</p>
+            <div className="rounded-[var(--radius-card)] bg-white p-6">
+              <p className="text-[0.875rem] font-medium text-muted">Услуги по теме</p>
               <ul className="mt-4 border-t border-line text-[0.9375rem]">
                 {services.map((service) => (
                   <li key={service.slug} className="border-b border-line">
@@ -183,10 +162,10 @@ export default async function ArticlePage({ params }: Props) {
               </ul>
             </div>
           ) : null}
-          <div className="border-t-[3px] border-navy-900 bg-paper p-5">
-            <p className="font-semibold text-ink">Нужна консультация по вашей ситуации?</p>
-            <p className="mt-2 text-[0.875rem] leading-relaxed text-muted">Опишите задачу — ответим после предварительного анализа.</p>
-            <ButtonLink href="/kontakty#zayavka" className="mt-4 w-full min-h-11 px-4 text-[0.875rem]">
+          <div className="rounded-[var(--radius-card)] bg-dark p-6 text-white">
+            <p className="font-medium text-white">Нужна консультация по вашей ситуации?</p>
+            <p className="mt-2 text-[0.875rem] leading-relaxed text-on-dark">Опишите задачу — ответим после предварительного анализа.</p>
+            <ButtonLink href="/kontakty#zayavka" variant="bronze" className="mt-5 w-full min-h-11 px-4 text-[0.875rem]">
               Оставить заявку
             </ButtonLink>
           </div>
@@ -194,18 +173,20 @@ export default async function ArticlePage({ params }: Props) {
       </div>
 
       {related.length > 0 ? (
-        <section aria-labelledby="related-title" className="bg-paper">
-          <div className="container-page py-16 lg:py-20">
-            <div className="flex flex-col gap-6 border-t border-ink pt-6 sm:flex-row sm:items-end sm:justify-between">
-              <h2 id="related-title" className="h-section">
-                Читайте также
-              </h2>
-              <ButtonLink href="/stati" variant="outline">
-                Все статьи
-                <ArrowRight aria-hidden="true" className="h-4 w-4" />
-              </ButtonLink>
-            </div>
-            <ul className="mt-10 grid gap-6 md:grid-cols-3">
+        <section aria-labelledby="related-title" className="container-page mt-20 lg:mt-24">
+          <div>
+            <SectionHead
+              id="related-title"
+              eyebrow="Статьи"
+              title="Читайте также"
+              action={
+                <ButtonLink href="/stati" variant="outline">
+                  Все статьи
+                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                </ButtonLink>
+              }
+            />
+            <ul className="mt-10 grid gap-4 md:grid-cols-3">
               {related.map((a) => (
                 <li key={a.slug}>
                   <ArticleCard article={a} />

@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ArticleCard } from "@/components/ui/ArticleCard";
 import { ButtonLink } from "@/components/ui/Button";
 import { DraftBadge } from "@/components/ui/DraftBadge";
-import { Section } from "@/components/ui/Section";
+import { SectionHead } from "@/components/ui/SectionHead";
 import { CtaBand } from "@/components/sections/CtaBand";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -48,184 +48,201 @@ export default async function ServicePage({ params }: Props) {
     { icon: Scale, title: "Правовая основа", text: service.basis.map((b) => b.code).join(" · ") },
   ];
 
-  // Нумерация разделов следует за фактически показанными блоками.
-  let n = 0;
-  const next = () => String(++n).padStart(2, "0");
-
   return (
     <>
       <PageHeader
         title={service.title}
         crumbs={[{ label: "Услуги", href: "/uslugi" }, { label: service.title }]}
         lead={service.lead}
+        aside={
+          <ul className="space-y-3" aria-label="Ключевые сведения">
+            {facts.map(({ icon: Icon, title, text }) => (
+              <li key={title} className="flex gap-4 rounded-[var(--radius-card)] bg-mist p-4">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-dark">
+                  <Icon aria-hidden="true" className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                </span>
+                <span>
+                  <span className="block text-[0.8125rem] text-muted">{title}</span>
+                  <span className="mt-0.5 block font-medium text-ink">{text}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        }
       >
         <ul className="mt-6 flex flex-wrap gap-2" aria-label="Кому подходит">
           {details.audiences.map((a) => (
-            <li key={a} className="border border-line-strong bg-white px-3 py-1.5 text-[0.8125rem] font-medium text-ink">
+            <li key={a} className="rounded-full bg-mist px-3.5 py-1.5 text-[0.8125rem] text-body">
               {audienceLabels[a]}
             </li>
           ))}
         </ul>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
           <ButtonLink href={`/kontakty?usluga=${service.slug}#zayavka`}>
             Оставить заявку
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </ButtonLink>
-          <ButtonLink href="#poryadok" variant="outline">
+          <a href="#poryadok" className="text-link text-[0.9375rem]">
             Как проходит работа
-          </ButtonLink>
+          </a>
         </div>
       </PageHeader>
 
-      {/* Ключевые сведения об услуге */}
-      <section aria-label="Ключевые сведения" className="container-page pt-12 lg:pt-16">
-        <ul className="grid gap-4 md:grid-cols-3 md:gap-6">
-          {facts.map(({ icon: Icon, title, text }) => (
-            <li key={title} className="flex flex-col bg-paper p-6 sm:p-7">
-              <span className="inline-flex h-12 w-12 items-center justify-center bg-white text-navy-900">
-                <Icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.75} />
-              </span>
-              <p className="label mt-8">{title}</p>
-              <p className="mt-2 text-[1.125rem] leading-snug font-semibold text-ink">{text}</p>
+      {/* Задача клиента: крупный текст слева, пояснение справа. */}
+      <section aria-labelledby="task-title" className="container-page mt-20 lg:mt-24">
+        <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
+          <div className="lg:col-span-5">
+            <SectionHead id="task-title" eyebrow="Задача" title="Зачем нужна услуга" />
+            <p className="mt-6 text-[1.25rem] leading-[1.55] text-ink">{details.task}</p>
+          </div>
+          <div className="prose-text text-body lg:col-span-6 lg:col-start-7 lg:pt-14">
+            {service.about.map((paragraph) => (
+              <p key={paragraph.slice(0, 32)}>{paragraph}</p>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Ситуации: белые карточки на светлом фоне. */}
+      <section aria-labelledby="situations-title" className="container-page mt-20 lg:mt-24">
+        <SectionHead id="situations-title" eyebrow="Ситуации" title={details.situationsHeading} />
+        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {details.situations.map((s) => (
+            <li key={s.title} className="surface p-6 sm:p-7">
+              <span aria-hidden="true" className="block h-[2px] w-8 bg-bronze" />
+              <h3 className="mt-5 text-[1.125rem]">{s.title}</h3>
+              <p className="mt-2 text-[0.9375rem] leading-relaxed text-muted">{s.text}</p>
             </li>
           ))}
         </ul>
       </section>
 
-      <Section id="task-title" index={next()} label="Задача" title="Зачем нужна услуга" lead={details.task}>
-        <div className="prose-text">
-          {service.about.map((paragraph) => (
-            <p key={paragraph.slice(0, 32)}>{paragraph}</p>
-          ))}
+      {/* Состав работ и итоговый документ: асимметричная пара. */}
+      <section aria-labelledby="work-title" className="container-page mt-20 lg:mt-24">
+        <div className="grid gap-4 lg:grid-cols-12">
+          <div className="panel bg-white p-6 sm:p-10 lg:col-span-8">
+            <SectionHead id="work-title" eyebrow="Состав работ" title="Что входит в работу" />
+            <ul className="mt-8 grid gap-x-8 sm:grid-cols-2">
+              {details.work.map((item) => (
+                <li key={item} className="relative border-b border-line py-4 pl-6 text-ink">
+                  <span aria-hidden="true" className="absolute top-[1.55rem] left-0 h-[2px] w-3 bg-bronze" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            {scope.map((group) => (
+              <div key={group.heading} className="mt-10">
+                <h3 className="text-[1.125rem]">{group.heading}</h3>
+                <ul className="mt-4 flex flex-wrap gap-2">
+                  {group.items.map((item) => (
+                    <li key={item.title} className="rounded-full bg-mist px-3.5 py-1.5 text-[0.875rem] text-body">
+                      {item.title}
+                      {item.draft ? <DraftBadge /> : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <aside className="panel flex flex-col justify-between bg-dark p-6 text-white sm:p-10 lg:col-span-4">
+            <div>
+              <p className="text-[0.875rem] text-on-dark">Итоговый документ</p>
+              <p className="mt-3 text-[1.625rem] leading-tight font-medium text-white">{service.result.title}</p>
+              <span aria-hidden="true" className="mt-6 block h-[2px] w-10 bg-bronze" />
+              <p className="mt-6 text-[0.9375rem] leading-relaxed text-on-dark">{service.result.text}</p>
+            </div>
+            <dl className="mt-10 space-y-4 border-t border-white/15 pt-6">
+              {service.basis.map((item) => (
+                <div key={item.code}>
+                  <dt className="font-medium text-white">{item.code}</dt>
+                  <dd className="mt-1 text-[0.8125rem] leading-relaxed text-on-dark">{item.text}</dd>
+                </div>
+              ))}
+            </dl>
+          </aside>
         </div>
-      </Section>
+      </section>
 
-      <Section id="situations-title" index={next()} label="Ситуации" title={details.situationsHeading} tone="paper">
-        <ul className="grid gap-x-8 sm:grid-cols-2">
-          {details.situations.map((s) => (
-            <li key={s.title} className="border-t border-line py-6">
-              <h3 className="text-[1.125rem]">{s.title}</h3>
-              <p className="mt-2 text-muted">{s.text}</p>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <Section id="work-title" index={next()} label="Состав работ" title="Что входит в работу">
-        <ol className="grid gap-x-8 border-t border-line sm:grid-cols-2">
-          {details.work.map((item, index) => (
-            <li key={item} className="grid grid-cols-[2.5rem_1fr] border-b border-line py-4">
-              <span className="text-[0.875rem] font-medium text-accent tabular-nums">
+      {/* Порядок: здесь номера отражают последовательность этапов. */}
+      <section id="poryadok" aria-labelledby="steps-title" className="container-page mt-20 scroll-mt-10 lg:mt-24">
+        <SectionHead
+          id="steps-title"
+          eyebrow="Порядок"
+          title="Как проходит работа"
+          action={
+            <Link href="/poryadok-raboty" className="text-link text-[0.9375rem]">
+              Общие условия и оплата
+            </Link>
+          }
+        />
+        <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {details.steps.map((step, index) => (
+            <li key={step.title} className="surface relative p-6">
+              <span className="text-[2.25rem] leading-none font-light text-steel tabular-nums">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <span className="text-ink">{item}</span>
+              <h3 className="mt-6 text-[1.0625rem]">{step.title}</h3>
+              <p className="mt-2 text-[0.9375rem] leading-relaxed text-muted">{step.text}</p>
+              {index < details.steps.length - 1 ? (
+                <span aria-hidden="true" className="absolute top-9 right-6 hidden h-px w-10 bg-bronze lg:block" />
+              ) : null}
             </li>
           ))}
         </ol>
-        {scope.map((group) => (
-          <div key={group.heading} className="mt-10">
-            <h3 className="text-[1.125rem]">{group.heading}</h3>
-            <ul className="mt-4 grid gap-x-8 border-t border-line sm:grid-cols-2">
-              {group.items.map((item) => (
-                <li key={item.title} className="border-b border-line py-3 text-ink">
+      </section>
+
+      {/* Что подготовить и вопросы: две колонки. */}
+      <section className="container-page mt-20 lg:mt-24">
+        <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
+          <div aria-labelledby="prepare-title" role="region" className="lg:col-span-5">
+            <SectionHead id="prepare-title" eyebrow="Документы" title={service.prepare.heading} lead={service.prepare.intro} />
+            <ul className="mt-8 space-y-3">
+              {prepare.map((item) => (
+                <li key={item.title} className="surface flex gap-4 p-4 text-ink">
+                  <span aria-hidden="true" className="mt-2.5 h-[2px] w-3 shrink-0 bg-bronze" />
                   {item.title}
-                  {item.draft ? <DraftBadge /> : null}
                 </li>
               ))}
             </ul>
           </div>
-        ))}
-        <div className="mt-10 border-t-[3px] border-navy-900 bg-paper p-6 sm:p-7">
-          <p className="label">Итоговый документ</p>
-          <p className="mt-2 text-[1.25rem] font-semibold text-ink">{service.result.title}</p>
-          <p className="mt-2 max-w-[44rem] text-muted">{service.result.text}</p>
+          <div aria-labelledby="faq-title" role="region" className="lg:col-span-6 lg:col-start-7">
+            <SectionHead id="faq-title" eyebrow="Вопросы" title="Частые вопросы" />
+            <div className="mt-8 divide-y divide-line rounded-[var(--radius-card)] bg-white px-6">
+              {details.faq.map((item) => (
+                <details key={item.question} className="group">
+                  <summary className="flex cursor-pointer list-none items-start justify-between gap-6 py-5 font-medium text-ink [&::-webkit-details-marker]:hidden">
+                    {item.question}
+                    <span aria-hidden="true" className="mt-0.5 text-xl leading-none text-bronze-deep group-open:hidden">
+                      +
+                    </span>
+                    <span aria-hidden="true" className="mt-0.5 hidden text-xl leading-none text-bronze-deep group-open:inline">
+                      −
+                    </span>
+                  </summary>
+                  <p className="pb-6 text-[0.9375rem] leading-relaxed text-muted">{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
         </div>
-      </Section>
-
-      <Section id="steps-title" anchor="poryadok" index={next()} label="Порядок" title="Как проходит работа" tone="paper">
-        <ol className="grid gap-px bg-line sm:grid-cols-2 lg:grid-cols-4">
-          {details.steps.map((step, index) => (
-            <li key={step.title} className="bg-paper py-6 sm:pr-6 lg:py-2">
-              <span className="text-[0.875rem] font-medium text-accent tabular-nums">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <h3 className="mt-3 text-[1.0625rem]">{step.title}</h3>
-              <p className="mt-2 text-[0.9375rem] leading-relaxed text-muted">{step.text}</p>
-            </li>
-          ))}
-        </ol>
-        <p className="mt-8 text-[0.9375rem] text-muted">
-          Общие условия, оплата и документы —{" "}
-          <Link href="/poryadok-raboty" className="text-link">
-            на странице «Порядок работы»
-          </Link>
-          .
-        </p>
-      </Section>
-
-      <Section
-        id="prepare-title"
-        index={next()}
-        label="Документы"
-        title={service.prepare.heading}
-        lead={service.prepare.intro}
-      >
-        <ul className="grid gap-x-8 border-t border-line sm:grid-cols-2">
-          {prepare.map((item) => (
-            <li key={item.title} className="grid grid-cols-[1.25rem_1fr] border-b border-line py-3.5 text-ink">
-              <span aria-hidden="true" className="text-accent">
-                —
-              </span>
-              {item.title}
-            </li>
-          ))}
-        </ul>
-        <div className="mt-8">
-          <p className="label">Правовая основа</p>
-          <dl className="mt-4 grid gap-x-8 border-t border-line sm:grid-cols-2">
-            {service.basis.map((item) => (
-              <div key={item.code} className="border-b border-line py-4">
-                <dt className="font-medium text-ink">{item.code}</dt>
-                <dd className="mt-1 text-[0.875rem] leading-relaxed text-muted">{item.text}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </Section>
-
-      <Section id="faq-title" index={next()} label="Вопросы" title="Частые вопросы" tone="paper">
-        <div className="border-t border-line">
-          {details.faq.map((item) => (
-            <details key={item.question} className="group border-b border-line">
-              <summary className="flex cursor-pointer list-none items-start justify-between gap-6 py-5 text-[1.0625rem] font-medium text-ink [&::-webkit-details-marker]:hidden">
-                {item.question}
-                <span aria-hidden="true" className="mt-0.5 text-xl leading-none text-accent group-open:hidden">
-                  +
-                </span>
-                <span aria-hidden="true" className="mt-0.5 hidden text-xl leading-none text-accent group-open:inline">
-                  −
-                </span>
-              </summary>
-              <p className="max-w-[68ch] pb-6 text-muted">{item.answer}</p>
-            </details>
-          ))}
-        </div>
-      </Section>
+      </section>
 
       <CtaBand service={service.slug} />
 
       {articles.length > 0 ? (
-        <section aria-labelledby="articles-title" className="container-page py-16 lg:py-20">
-          <div className="flex flex-col gap-6 border-t border-ink pt-6 sm:flex-row sm:items-end sm:justify-between">
-            <h2 id="articles-title" className="h-section">
-              Статьи по теме
-            </h2>
-            <ButtonLink href="/stati" variant="outline">
-              Все статьи
-              <ArrowRight aria-hidden="true" className="h-4 w-4" />
-            </ButtonLink>
-          </div>
-          <ul className="mt-10 grid gap-6 md:grid-cols-3">
+        <section aria-labelledby="articles-title" className="container-page mt-20 lg:mt-24">
+          <SectionHead
+            id="articles-title"
+            eyebrow="Статьи"
+            title="Статьи по теме"
+            action={
+              <ButtonLink href="/stati" variant="outline">
+                Все статьи
+                <ArrowRight aria-hidden="true" className="h-4 w-4" />
+              </ButtonLink>
+            }
+          />
+          <ul className="mt-10 grid gap-4 md:grid-cols-3">
             {articles.map((a) => (
               <li key={a.slug}>
                 <ArticleCard article={a} />
@@ -235,36 +252,36 @@ export default async function ServicePage({ params }: Props) {
         </section>
       ) : null}
 
-      <section aria-labelledby="other-title" className="bg-paper">
-        <div className="container-page py-16 lg:py-20">
-          <div className="flex flex-col gap-6 border-t border-ink pt-6 sm:flex-row sm:items-end sm:justify-between">
-            <h2 id="other-title" className="h-section">
-              Другие услуги
-            </h2>
+      <section aria-labelledby="other-title" className="container-page mt-20 lg:mt-24">
+        <SectionHead
+          id="other-title"
+          eyebrow="Услуги"
+          title="Другие направления"
+          action={
             <ButtonLink href="/uslugi" variant="outline">
               Все услуги
               <ArrowRight aria-hidden="true" className="h-4 w-4" />
             </ButtonLink>
-          </div>
-          <ul className="mt-10 grid gap-x-8 md:grid-cols-2">
-            {others.map((item) => (
-              <li key={item.slug} className="border-t border-line-strong">
-                <Link href={`/uslugi/${item.slug}`} className="group block py-6">
-                  <span className="block text-[1.375rem] leading-snug font-semibold text-navy-900 group-hover:text-accent">
-                    {item.title}
-                  </span>
-                  <span className="mt-3 block max-w-[34rem] text-[0.9375rem] leading-relaxed text-muted">
-                    {item.summary}
-                  </span>
-                  <span className="mt-5 inline-flex items-center gap-2 text-[0.875rem] font-medium text-ink">
-                    Подробнее
-                    <ArrowRight aria-hidden="true" className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+          }
+        />
+        <ul className="mt-10 grid gap-4 md:grid-cols-2">
+          {others.map((item) => (
+            <li key={item.slug}>
+              <Link
+                href={`/uslugi/${item.slug}`}
+                className="group flex h-full flex-col justify-between gap-6 rounded-[var(--radius-card)] border-t-[3px] border-bronze bg-white p-7"
+              >
+                <span>
+                  <span className="block text-[1.375rem] leading-snug font-medium text-ink">{item.title}</span>
+                  <span className="mt-3 block max-w-[34rem] text-[0.9375rem] leading-relaxed text-muted">{item.summary}</span>
+                </span>
+                <span className="inline-flex h-11 w-11 items-center justify-center self-end rounded-full bg-mist text-ink transition-colors group-hover:bg-dark group-hover:text-white">
+                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
     </>
   );

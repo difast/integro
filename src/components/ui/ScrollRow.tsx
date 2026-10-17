@@ -37,7 +37,7 @@ export function ScrollRow({ children, label }: { children: ReactNode; label: str
   };
 
   const button =
-    "inline-flex h-11 w-11 items-center justify-center border border-line-strong bg-white text-ink transition-colors hover:border-navy-900 hover:bg-navy-900 hover:text-white disabled:pointer-events-none disabled:opacity-35";
+    "inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink transition-colors hover:bg-dark hover:text-white disabled:pointer-events-none disabled:opacity-40";
 
   return (
     <div>

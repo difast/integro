@@ -12,6 +12,7 @@ export const mainNav: NavItem[] = [
   { label: "Порядок работы", href: "/poryadok-raboty" },
   { label: "Статьи", href: "/stati" },
   { label: "Контакты", href: "/kontakty" },
+  { label: "Правовая информация", href: "/pravovaya-informaciya" },
 ];
 
 export const clientLinks: NavItem[] = [
