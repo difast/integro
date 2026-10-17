@@ -5,8 +5,12 @@ import { company } from "@/config/company";
 import { audiences, principles } from "@/config/content";
 import { services } from "@/config/services";
 import { companyVideo } from "@/config/video";
-import { getSiteUrl } from "@/lib/site";
+import { getSiteUrl, workingHoursInline } from "@/lib/site";
+import { articleCategories, getArticles } from "@/lib/articles";
+import { audienceLabels } from "@/config/service-details";
 import { ButtonLink } from "@/components/ui/Button";
+import { ArticleCard } from "@/components/ui/ArticleCard";
+import { ScrollItem, ScrollRow } from "@/components/ui/ScrollRow";
 import { Section } from "@/components/ui/Section";
 import { CompanyVideo } from "@/components/sections/CompanyVideo";
 import { CtaBand } from "@/components/sections/CtaBand";
@@ -24,6 +28,10 @@ const quickActions = [
 ] as const;
 
 export default function HomePage() {
+  const articles = getArticles()
+    .slice(0, 6)
+    .map((a) => ({ ...a, categoryLabel: articleCategories[a.category] }));
+
   return (
     <>
       <section aria-labelledby="hero-title" className="border-b border-line">
@@ -31,7 +39,7 @@ export default function HomePage() {
           <div className="lg:col-span-7 lg:pr-8">
             <p className="label">
               <span className="label-index">—</span>
-              {company.legalName}
+              {company.legalName} · оценочная и экспертная деятельность
             </p>
             <h1
               id="hero-title"
@@ -40,9 +48,20 @@ export default function HomePage() {
               Оценка имущества и судебная экспертиза
             </h1>
             <p className="lead mt-7 max-w-[40rem]">
-              Определяем стоимость имущества и прав, проводим экспертизы по определению суда и внесудебные
-              исследования для частных лиц, организаций и участников судебных процессов.
+              Определяем стоимость имущества и прав, проводим экспертизы по определению суда и экспертные
+              исследования. Результат — документ с обоснованными выводами, на который можно опереться в сделке,
+              переговорах или суде.
             </p>
+            <div className="mt-8">
+              <p className="text-[0.8125rem] font-medium tracking-[0.06em] text-muted uppercase">Работаем с</p>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {Object.values(audienceLabels).map((label) => (
+                  <li key={label} className="border border-line-strong px-3 py-1.5 text-[0.875rem] font-medium text-ink">
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            </div>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
               <ButtonLink href="/kontakty#zayavka">
                 Оставить заявку
@@ -52,6 +71,16 @@ export default function HomePage() {
                 Направления деятельности
               </ButtonLink>
             </div>
+            {company.contacts.email || company.contacts.workingHours ? (
+              <p className="mt-6 flex flex-wrap gap-x-5 gap-y-1 text-[0.875rem] text-muted">
+                {company.contacts.email ? (
+                  <a href={`mailto:${company.contacts.email}`} className="text-link">
+                    {company.contacts.email}
+                  </a>
+                ) : null}
+                {company.contacts.workingHours ? <span>Часы связи: {workingHoursInline()}</span> : null}
+              </p>
+            ) : null}
           </div>
 
           <nav aria-label="Быстрые действия" className="lg:col-span-5 lg:self-center">
@@ -87,9 +116,10 @@ export default function HomePage() {
         label="Услуги"
         title="Направления деятельности"
         action={
-          <Link href="/uslugi" className="text-link text-[0.9375rem]">
+          <ButtonLink href="/uslugi" variant="outline">
             Все услуги
-          </Link>
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
+          </ButtonLink>
         }
       >
         <ul className="grid border-t border-line md:grid-cols-3">
@@ -205,6 +235,42 @@ export default function HomePage() {
           ))}
         </ul>
       </Section>
+
+      {articles.length > 0 ? (
+        <section aria-labelledby="articles-title">
+          <div className="container-page py-16 lg:py-24">
+            <div className="grid gap-6 border-t border-ink pt-6 lg:grid-cols-12 lg:gap-8 lg:pt-8">
+              <p className="label lg:col-span-3">
+                <span className="label-index">05</span>
+                Статьи
+              </p>
+              <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between lg:col-span-9">
+                <div className="max-w-[40rem]">
+                  <h2 id="articles-title" className="h-section">
+                    Полезные материалы
+                  </h2>
+                  <p className="lead mt-4">
+                    Разбираем вопросы, которые возникают у заказчиков оценки и участников судебных споров.
+                  </p>
+                </div>
+                <ButtonLink href="/stati" variant="outline" className="shrink-0 self-start md:self-auto">
+                  Все статьи
+                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                </ButtonLink>
+              </div>
+            </div>
+            <div className="mt-10 lg:mt-12">
+              <ScrollRow label="Статьи">
+                {articles.map((article, index) => (
+                  <ScrollItem key={article.slug}>
+                    <ArticleCard article={article} tone={index === 0 ? "dark" : "light"} />
+                  </ScrollItem>
+                ))}
+              </ScrollRow>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <CtaBand />
     </>

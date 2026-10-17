@@ -30,6 +30,8 @@ Node.js: 20.9 или новее (рекомендуется 22, см. `.nvmrc`).
 | Услуги (тексты, правовая основа, перечни) | `src/config/services.ts` |
 | Навигация, порядок работы, принципы, FAQ, оплата | `src/config/content.ts` |
 | Специалисты (раздел выводится, если список не пуст) | `src/config/team.ts` |
+| Подробное содержание страниц услуг (ситуации, состав работ, этапы, FAQ) | `src/config/service-details.ts` |
+| Статьи | `content/articles/*.md` |
 | Цвета, типографика, общие стили | `src/app/globals.css` |
 | Изображение для соцсетей | `public/og.png` |
 | Логотип (знак) и фавиконы | `public/brand/logo-mark.png`, `src/app/icon.png`, `src/app/apple-icon.png`, `src/app/favicon.ico`; исходник — `assets/brand/logo-source.jpeg` |
@@ -45,12 +47,36 @@ Node.js: 20.9 или новее (рекомендуется 22, см. `.nvmrc`).
 - `/` — главная
 - `/uslugi`, `/uslugi/ocenka`, `/uslugi/sudebnaya-ekspertiza`, `/uslugi/ekspertnye-issledovaniya`
 - `/o-kompanii`, `/poryadok-raboty`, `/kontakty` (форма заявки, якорь `#zayavka`)
+- `/stati` и `/stati/<slug>` — статьи
 - `/pravovaya-informaciya` — правовая информация:
   - `/pravovaya-informaciya/svedeniya-ob-organizacii`
   - `/pravovaya-informaciya/politika-obrabotki-personalnyh-dannyh`
   - `/pravovaya-informaciya/soglasie-na-obrabotku-personalnyh-dannyh`
 - старые адреса `/politika-konfidencialnosti` и `/soglasie-na-obrabotku` — постоянный редирект (308)
 - `/robots.txt`, `/sitemap.xml`, страница 404
+
+## Статьи
+
+Статьи — Markdown-файлы в `content/articles/`. Новый файл автоматически появляется в списке `/stati`, на главной,
+в блоках «Статьи по теме» на страницах связанных услуг и в `sitemap.xml`. Адрес статьи — имя файла:
+`content/articles/primer.md` → `/stati/primer`.
+
+```markdown
+---
+title: Заголовок статьи
+description: Краткий анонс для карточки и поисковиков
+category: ocenka            # ocenka | ekspertiza | rabota (src/lib/articles.ts)
+published: 2026-10-17
+updated: 2026-11-01         # необязательно
+services: [ocenka]          # связанные услуги, необязательно
+draft: true                 # черновик: виден только в режиме разработки
+---
+
+Текст в Markdown: ## подзаголовки (из них строится оглавление), списки, таблицы, > примечания, ссылки.
+```
+
+Статьи сортируются по дате публикации (новые сверху). Для каждой формируются title, description, canonical,
+Open Graph и разметка Article.
 
 ## Видео на главной
 
