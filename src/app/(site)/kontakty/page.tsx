@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { legalDocuments } from "@/config/legal";
 import { services } from "@/config/services";
+import { isDatabaseConfigured } from "@/lib/db";
 import { isMailConfigured } from "@/lib/mail";
 import { pageMetadata } from "@/lib/metadata";
 import { organizationDetails } from "@/lib/organization";
@@ -16,7 +17,7 @@ export const metadata = pageMetadata({
   path: "/kontakty",
 });
 
-// Страница читает параметры запроса и настройки SMTP во время выполнения.
+// Страница читает параметры запроса и настройки базы заявок и SMTP во время выполнения.
 export const dynamic = "force-dynamic";
 
 type Props = { searchParams: Promise<{ usluga?: string | string[] }> };
@@ -96,7 +97,7 @@ export default async function ContactsPage({ searchParams }: Props) {
           <RequestForm
             services={services.map((service) => ({ value: service.slug, label: service.title }))}
             defaultService={defaultService}
-            enabled={isMailConfigured()}
+            enabled={isDatabaseConfigured() || isMailConfigured()}
             showSetupHint={process.env.NODE_ENV !== "production"}
             hasContacts={hasAnyContact()}
           />

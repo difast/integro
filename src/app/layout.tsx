@@ -5,9 +5,6 @@ import "./globals.css";
 import { company } from "@/config/company";
 import { getMetadataBase, getSiteUrl } from "@/lib/site";
 import { ogImage } from "@/lib/metadata";
-import { SiteFooter } from "@/components/layout/SiteFooter";
-import { SiteHeader } from "@/components/layout/SiteHeader";
-import { CookieNotice } from "@/components/layout/CookieNotice";
 
 // IBM Plex Sans (SIL OFL 1.1), локальные файлы: латиница и кириллица подключаются
 // отдельными начертаниями с unicode-range, без запросов к внешним сервисам.
@@ -75,12 +72,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           Перейти к содержанию
         </a>
-        <SiteHeader />
-        <main id="main" className="flex-1">
-          {children}
-        </main>
-        <SiteFooter />
-        <CookieNotice />
+        {children}
       </body>
     </html>
   );

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef } from "react";
 import { AlertCircle, ArrowRight, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
-import { submitRequest } from "@/app/kontakty/actions";
+import { submitRequest } from "@/app/(site)/kontakty/actions";
 import { initialRequestState, limits, type RequestFieldName } from "@/lib/request-form";
 import { company } from "@/config/company";
 import { legalDocuments } from "@/config/legal";
@@ -15,7 +15,7 @@ type ServiceOption = { value: string; label: string };
 type RequestFormProps = {
   services: ServiceOption[];
   defaultService?: string;
-  /** false — SMTP не настроен: форма показывается, но отправка отключена */
+  /** false — не настроены ни база заявок, ни SMTP: форма показывается, но отправка отключена */
   enabled: boolean;
   /** Показывать подсказку для владельца сайта (только вне production) */
   showSetupHint?: boolean;
@@ -35,6 +35,16 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
+function newSubmissionKey(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  // Запасной вариант для старых браузеров: UUID v4 из криптографического генератора.
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export function RequestForm({
   services,
   defaultService = "",
@@ -44,22 +54,31 @@ export function RequestForm({
 }: RequestFormProps) {
   const [state, formAction, pending] = useActionState(submitRequest, initialRequestState);
   const startedAtRef = useRef(0);
+  const submissionKeyRef = useRef("");
   const statusRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   // Время открытия формы — для серверной проверки от автоматической отправки.
   // Хранится вне DOM: React сбрасывает поля формы после каждого действия.
+  // Ключ отправки защищает от дубликатов при двойном нажатии и повторе после сбоя:
+  // он одинаков для всех попыток одной заявки и меняется после успешной отправки.
   useEffect(() => {
     startedAtRef.current = Date.now();
+    submissionKeyRef.current = newSubmissionKey();
   }, []);
 
   const submit = (formData: FormData) => {
     formData.set("startedAt", String(startedAtRef.current));
+    formData.set("submissionKey", submissionKeyRef.current);
+    formData.set("page", `${window.location.pathname}${window.location.search}`);
     formAction(formData);
   };
 
   useEffect(() => {
-    if (state.status === "success") formRef.current?.reset();
+    if (state.status === "success") {
+      formRef.current?.reset();
+      submissionKeyRef.current = newSubmissionKey();
+    }
     if (state.status !== "idle") statusRef.current?.focus();
   }, [state]);
 
@@ -81,8 +100,9 @@ export function RequestForm({
               <p className="font-semibold">Приём заявок через сайт пока не подключён.</p>
               {showSetupHint ? (
                 <p className="mt-1">
-                  Для владельца сайта: задайте переменные SMTP_HOST, SMTP_USER, SMTP_PASSWORD и MAIL_TO (см.
-                  .env.example). Это сообщение видно только в режиме разработки.
+                  Для владельца сайта: задайте переменную DATABASE_URL (база заявок) и при необходимости SMTP_HOST,
+                  SMTP_USER, SMTP_PASSWORD и MAIL_TO для уведомлений (см. .env.example). Это сообщение видно только в
+                  режиме разработки.
                 </p>
               ) : hasContacts ? (
                 <p className="mt-1">Пожалуйста, воспользуйтесь контактами, указанными на этой странице.</p>

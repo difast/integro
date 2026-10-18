@@ -95,5 +95,5 @@ export const company: Company = {
   },
   social: [],
   copyrightSince: null,
-  legalRevisionDate: "16.10.2026",
+  legalRevisionDate: "18.10.2026",
 };
