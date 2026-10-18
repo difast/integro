@@ -1,14 +1,14 @@
 import "server-only";
 import { Pool, type PoolClient, type QueryResultRow } from "pg";
+import { buildPoolConfig } from "./config";
 import { migrations } from "./migrations";
 
 /**
  * Подключение к PostgreSQL.
  *
- * DATABASE_URL — строка подключения (postgresql://user:password@host:5432/db).
- * DATABASE_SSL — "true": TLS с проверкой сертификата (корневой сертификат можно передать
- *   в DATABASE_CA_CERT в формате PEM); не задана — без TLS, для подключения по приватной
- *   сети Timeweb. Параметры строки подключения (sslmode) тоже учитываются драйвером.
+ * DATABASE_URL — строка подключения (postgresql://user:password@host:5432/db?sslmode=verify-full).
+ * TLS включается параметром sslmode в адресе или DATABASE_SSL=true; корневой сертификат
+ * провайдера передаётся в DATABASE_CA_CERT (PEM). Подробности — src/lib/db/config.ts.
  *
  * Пул создаётся лениво при первом запросе. Схема применяется один раз на процесс.
  */
@@ -30,17 +30,10 @@ const globalForDb = globalThis as unknown as {
 };
 
 function createPool(): Pool {
-  const connectionString = process.env.DATABASE_URL?.trim();
-  if (!connectionString) throw new DatabaseNotConfiguredError();
-
-  const ssl =
-    process.env.DATABASE_SSL === "true"
-      ? { rejectUnauthorized: true, ca: process.env.DATABASE_CA_CERT?.replace(/\\n/g, "\n") || undefined }
-      : undefined;
+  if (!isDatabaseConfigured()) throw new DatabaseNotConfiguredError();
 
   const pool = new Pool({
-    connectionString,
-    ssl,
+    ...buildPoolConfig(process.env),
     max: 5,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
