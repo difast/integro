@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPoolConfig } from "@/lib/db/config";
+import { buildPoolConfig, normalizePem } from "@/lib/db/config";
 
 const base = "postgresql://app_user:p%40ss%23word@db.example.net:5432/default_db";
 
@@ -18,8 +18,18 @@ describe("buildPoolConfig", () => {
     expect(config.connectionString).toBe(base);
     expect(config.ssl).toEqual({
       rejectUnauthorized: true,
-      ca: "-----BEGIN CERTIFICATE-----\nABC\n-----END CERTIFICATE-----",
+      ca: "-----BEGIN CERTIFICATE-----\nABC\n-----END CERTIFICATE-----\n",
     });
+  });
+
+  it("restores certificates pasted into a single-line field", () => {
+    const body = "A".repeat(64) + "B".repeat(10);
+    const expected = `-----BEGIN CERTIFICATE-----\n${"A".repeat(64)}\n${"B".repeat(10)}\n-----END CERTIFICATE-----\n`;
+    const spaced = `-----BEGIN CERTIFICATE----- ${"A".repeat(64)} ${"B".repeat(10)} -----END CERTIFICATE-----`;
+    expect(normalizePem(spaced)).toBe(expected);
+    expect(normalizePem(`-----BEGIN CERTIFICATE-----${body}-----END CERTIFICATE-----`)).toBe(expected);
+    expect(normalizePem("not a certificate")).toBeUndefined();
+    expect(normalizePem(`${spaced}\n${spaced}`)).toBe(expected + expected);
   });
 
   it("enables TLS with DATABASE_SSL=true and disables it otherwise", () => {

@@ -32,8 +32,22 @@ const globalForDb = globalThis as unknown as {
 function createPool(): Pool {
   if (!isDatabaseConfigured()) throw new DatabaseNotConfiguredError();
 
+  const config = buildPoolConfig(process.env);
+  // Диагностика без секретов: включён ли TLS и распознан ли сертификат из DATABASE_CA_CERT.
+  if (config.ssl) {
+    const ca = typeof config.ssl === "object" ? config.ssl.ca : undefined;
+    const source = ca
+      ? `DATABASE_CA_CERT (${String(ca).split("BEGIN CERTIFICATE").length - 1} cert)`
+      : process.env.DATABASE_CA_CERT?.trim()
+        ? "DATABASE_CA_CERT is set but no PEM certificate found in it; using system CAs"
+        : "system CAs";
+    console.info(`[db] TLS on, certificate check: ${source}`);
+  } else {
+    console.info("[db] TLS off");
+  }
+
   const pool = new Pool({
-    ...buildPoolConfig(process.env),
+    ...config,
     max: 5,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,

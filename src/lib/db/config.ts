@@ -26,7 +26,22 @@ export function buildPoolConfig(env: Record<string, string | undefined>): Pick<P
   const useTls = env.DATABASE_SSL === "true" || (sslmode !== null && TLS_MODES.has(sslmode));
   if (!useTls) return { connectionString, ssl: false };
 
-  // В панели хостинга переводы строк сертификата можно записать как \n.
-  const ca = env.DATABASE_CA_CERT?.trim().replace(/\\n/g, "\n") || undefined;
-  return { connectionString, ssl: { rejectUnauthorized: true, ca } };
+  return { connectionString, ssl: { rejectUnauthorized: true, ca: normalizePem(env.DATABASE_CA_CERT) } };
+}
+
+const PEM_BLOCK = /-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----/g;
+
+/**
+ * Приводит сертификат к стандартному виду PEM. Однострочные поля панели хостинга
+ * превращают переводы строк в пробелы или «\n» — содержимое пересобирается
+ * по 64 символа в строке.
+ */
+export function normalizePem(value: string | undefined): string | undefined {
+  if (!value?.trim()) return undefined;
+  const blocks = [...value.matchAll(PEM_BLOCK)].map((match) => {
+    const body = (match[1] ?? "").replace(/\\n|\s/g, "");
+    const lines = body.match(/.{1,64}/g) ?? [];
+    return ["-----BEGIN CERTIFICATE-----", ...lines, "-----END CERTIFICATE-----"].join("\n");
+  });
+  return blocks.length > 0 ? `${blocks.join("\n")}\n` : undefined;
 }
