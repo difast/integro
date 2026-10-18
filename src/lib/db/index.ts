@@ -1,6 +1,6 @@
 import "server-only";
 import { Pool, type PoolClient, type QueryResultRow } from "pg";
-import { buildPoolConfig } from "./config";
+import { buildPoolConfig, describeConnection } from "./config";
 import { migrations } from "./migrations";
 
 /**
@@ -33,18 +33,18 @@ function createPool(): Pool {
   if (!isDatabaseConfigured()) throw new DatabaseNotConfiguredError();
 
   const config = buildPoolConfig(process.env);
-  // Диагностика без секретов: включён ли TLS и распознан ли сертификат из DATABASE_CA_CERT.
-  if (config.ssl) {
-    const ca = typeof config.ssl === "object" ? config.ssl.ca : undefined;
-    const source = ca
-      ? `DATABASE_CA_CERT (${String(ca).split("BEGIN CERTIFICATE").length - 1} cert)`
-      : process.env.DATABASE_CA_CERT?.trim()
-        ? "DATABASE_CA_CERT is set but no PEM certificate found in it; using system CAs"
-        : "system CAs";
-    console.info(`[db] TLS on, certificate check: ${source}`);
-  } else {
-    console.info("[db] TLS off");
+  // Диагностика без пароля: куда подключаемся, включён ли TLS и распознан ли сертификат.
+  const ssl = config.ssl;
+  let tls = "off";
+  if (ssl && typeof ssl === "object") {
+    const verified = ssl.rejectUnauthorized !== false;
+    const caCount = ssl.ca ? String(ssl.ca).split("BEGIN CERTIFICATE").length - 1 : 0;
+    const caNote = process.env.DATABASE_CA_CERT?.trim() && caCount === 0 ? ", DATABASE_CA_CERT has no PEM certificate" : "";
+    tls = verified
+      ? `on, verified by ${caCount ? `DATABASE_CA_CERT (${caCount} cert)` : "system CAs"}${caNote}`
+      : `on, certificate not verified${caNote}`;
   }
+  console.info(`[db] connecting to ${describeConnection(config)}, TLS ${tls}`);
 
   const pool = new Pool({
     ...config,
