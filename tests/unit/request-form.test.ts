@@ -34,6 +34,12 @@ describe("describeRequestContext", () => {
     );
   });
 
+  it("marks the popup form and detects the service page from the path", () => {
+    expect(describeRequestContext("/uslugi/ocenka-biznesa?forma=okno")).toBe("Всплывающая форма; Страница услуги: Оценка бизнеса");
+    expect(describeRequestContext("/uslugi/sudebnaya-ekspertiza?forma=okno")).toBe("Всплывающая форма; Страница услуги: Судебная экспертиза");
+    expect(describeRequestContext("/uslugi/unknown?forma=okno")).toBe("Всплывающая форма");
+  });
+
   it("ignores unknown values and pages without context", () => {
     expect(describeRequestContext("/kontakty?rekomendaciya=<script>&usluga=hack")).toBeNull();
     expect(describeRequestContext("/kontakty")).toBeNull();

@@ -3,7 +3,7 @@ import { company } from "@/config/company";
 import { mainNav } from "@/config/content";
 import { audienceLabels, type AudienceKey } from "@/config/service-details";
 import { phoneHref } from "@/lib/site";
-import { ButtonLink } from "@/components/ui/Button";
+import { RequestButton } from "@/components/request/RequestButton";
 import { Logo } from "@/components/ui/Logo";
 import { DesktopNav, MobileMenu } from "./HeaderNav";
 
@@ -47,9 +47,9 @@ export function SiteHeader() {
             </a>
           ) : null}
           <div className="hidden sm:block">
-            <ButtonLink href="/kontakty#zayavka" className="min-h-11 px-5 text-[0.875rem]">
+            <RequestButton className="min-h-11 px-5 text-[0.875rem]">
               Оставить заявку
-            </ButtonLink>
+            </RequestButton>
           </div>
           <MobileMenu items={mainNav} audiences={audiences} phone={phone} email={email} workingHours={workingHours} />
         </div>

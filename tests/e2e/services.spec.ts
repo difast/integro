@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import JSZip from "jszip";
 import { Client } from "pg";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -43,28 +44,79 @@ test("помощник: результат, переход к заявке и к
   await expect(page.getByText("не юридическое заключение")).toBeVisible();
   await expect(page.getByRole("link", { name: "Оценка квартиры" })).toHaveAttribute("href", "/uslugi/ocenka-kvartiry");
 
+  // «Перейти к заявке» открывает всплывающую форму с предвыбранным направлением.
   await page.getByRole("link", { name: "Перейти к заявке" }).click();
-  await expect(page).toHaveURL(/\/kontakty\?usluga=ocenka-kvartiry&rekomendaciya=otchet&obekt=realty/);
-  // Направление предвыбрано, текст обращения не подставлен.
-  await expect(page.getByLabel("Направление")).toHaveValue("ocenka");
-  await expect(page.getByLabel("Опишите задачу")).toHaveValue("");
+  const dialog = page.getByRole("dialog", { name: "Оставить заявку" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Направление")).toHaveValue("ocenka");
+  await expect(dialog.getByLabel("Опишите задачу")).toHaveValue("");
+  await expect(page).toHaveURL(/\/kakoy-dokument-nuzhen$/);
 
   const name = `Помощник ${Date.now()}`;
-  await page.getByLabel("Как к вам обращаться").fill(name);
-  await page.getByLabel("Электронная почта").fill("helper@example.ru");
-  await page.getByLabel("Опишите задачу").fill("Оценка квартиры для нотариуса");
-  await page.getByLabel(/Даю согласие/).check();
+  await dialog.getByLabel("Как к вам обращаться").fill(name);
+  await dialog.getByLabel("Эл. почта").fill("helper@example.ru");
+  await dialog.getByLabel("Опишите задачу").fill("Оценка квартиры для нотариуса");
+  await dialog.getByRole("checkbox").check();
   await page.waitForTimeout(3_200);
-  await page.getByRole("button", { name: "Отправить заявку" }).click();
-  await expect(page.getByText("Заявка отправлена")).toBeVisible();
+  await dialog.getByRole("button", { name: "Отправить заявку" }).click();
+  await expect(page.getByRole("heading", { name: "Заявка отправлена" })).toBeVisible();
 
-  const { rows } = await db.query("SELECT service, message, context FROM requests WHERE name = $1", [name]);
+  const { rows } = await db.query("SELECT service, message, context, source_page FROM requests WHERE name = $1", [name]);
   expect(rows).toHaveLength(1);
   expect(rows[0].service).toBe("ocenka");
   expect(rows[0].message).toBe("Оценка квартиры для нотариуса");
   expect(rows[0].context).toBe(
-    "Помощник «Какой документ мне нужен?»: отчёт об оценке (квартира или другая недвижимость); Страница услуги: Оценка квартиры",
+    "Всплывающая форма; Помощник «Какой документ мне нужен?»: отчёт об оценке (квартира или другая недвижимость); Страница услуги: Оценка квартиры",
   );
+  expect(rows[0].source_page).toMatch(/^\/kakoy-dokument-nuzhen\?/);
+});
+
+test("всплывающая форма: помещается в экран, закрывается, проверяет поля без запроса на сервер", async ({ page }) => {
+  for (const size of [
+    { width: 360, height: 640 },
+    { width: 1280, height: 720 },
+  ]) {
+    await page.setViewportSize(size);
+    await page.goto("/uslugi/ocenka-biznesa");
+    const posts: string[] = [];
+    const onRequest = (request: { method: () => string; url: () => string }) => {
+      if (request.method() === "POST") posts.push(request.url());
+    };
+    page.on("request", onRequest);
+
+    await page.getByRole("main").getByRole("link", { name: "Оставить заявку" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "Оставить заявку" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel("Как к вам обращаться")).toBeFocused();
+    await expect(dialog.getByLabel("Направление")).toHaveValue("ocenka");
+
+    // Даже со всеми ошибками окно помещается в экран без прокрутки.
+    await dialog.getByRole("button", { name: "Отправить заявку" }).click();
+    await expect(dialog.getByText("Укажите, как к вам обращаться")).toBeVisible();
+    const fits = await dialog.evaluate((el) => el.scrollHeight <= el.clientHeight && el.getBoundingClientRect().bottom <= innerHeight);
+    expect(fits).toBe(true);
+    await page.waitForTimeout(300);
+    expect(posts).toEqual([]);
+    page.off("request", onRequest);
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+  }
+
+  // Мобильное меню: кнопка открывает окно и закрывает меню.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Открыть меню" }).click();
+  await page.getByRole("link", { name: "Оставить заявку", exact: true }).filter({ visible: true }).first().click();
+  await expect(page.getByRole("dialog", { name: "Оставить заявку" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Мобильная навигация" })).toBeHidden();
+
+  // На странице «Контакты» кнопка в шапке ведёт к форме на странице, окно не открывается.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/kontakty");
+  await page.getByRole("banner").getByRole("link", { name: "Оставить заявку" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page).toHaveURL(/#zayavka$/);
 });
 
 test("помощник: управление с клавиатуры, консультация при противоречии, пройти заново", async ({ page }) => {
@@ -142,18 +194,34 @@ test("шаблон ходатайства: свой кодекс для кажд
   await page.getByRole("textbox", { name: "Наименование суда" }).fill("Московский городской суд");
   await page.getByRole("textbox", { name: "Вопросы эксперту" }).fill("Какова стоимость объекта?\nКакие дефекты имеются?");
   await expect(preview).toContainText("В Московский городской суд");
-  await expect(preview).toContainText("1. Какова стоимость объекта?\n2. Какие дефекты имеются?");
+  await expect(preview).toContainText("1. Какова стоимость объекта?");
+  await expect(preview).toContainText("2. Какие дефекты имеются?");
 
   await page.getByRole("button", { name: "Копировать" }).click();
   await expect(page.getByRole("status").filter({ hasText: "скопирован" })).toBeVisible();
   const clip = await page.evaluate(() => navigator.clipboard.readText());
   expect(clip).toContain("В Московский городской суд");
 
-  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Скачать .txt" }).click()]);
-  expect(download.suggestedFilename()).toBe("hodataystvo-o-naznachenii-ekspertizy.txt");
-  const file = readFileSync((await download.path())!, "utf8");
-  expect(file).toContain("ХОДАТАЙСТВО");
-  expect(file).toContain("административный истец");
+  // Предпросмотр в новой вкладке: шапка справа, заголовок по центру.
+  const [tab] = await Promise.all([context.waitForEvent("page"), page.getByRole("button", { name: "Предпросмотр" }).click()]);
+  await tab.waitForLoadState();
+  await expect(tab.locator(".addressee")).toContainText("В Московский городской суд");
+  await expect(tab.locator(".title")).toHaveCSS("text-align", "center");
+  expect(await tab.locator(".addressee").evaluate((el) => el.getBoundingClientRect().left > innerWidth / 3)).toBe(true);
+  await tab.close();
+
+  // Файл Word: правильная раскладка внутри document.xml.
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Скачать Word" }).click()]);
+  expect(download.suggestedFilename()).toBe("hodataystvo-o-naznachenii-ekspertizy.docx");
+  const zip = await JSZip.loadAsync(readFileSync((await download.path())!));
+  const xml = await zip.file("word/document.xml")!.async("string");
+  expect(xml).toContain("Московский городской суд");
+  expect(xml).toContain("административный истец");
+  expect(xml).toMatch(/<w:jc w:val="center"\/>/);
+  expect(xml).toMatch(/<w:jc w:val="both"\/>/);
+  expect(xml).toMatch(/<w:ind w:left="\d{4}"\/>/);
+  expect(xml).toMatch(/<w:tab w:val="right"/);
+  expect(await zip.file("word/styles.xml")!.async("string")).toContain("Times New Roman");
 
   // Печать вызывает системный диалог; проверяем, что кнопка вызывает window.print.
   await page.evaluate(() => {

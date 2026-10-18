@@ -6,9 +6,9 @@ import { articleCategories, getArticles } from "@/lib/articles";
 import { breadcrumbJsonLd, JsonLd } from "@/lib/structured-data";
 import { PageHeader, type Crumb } from "@/components/layout/PageHeader";
 import { ArticleCard } from "@/components/ui/ArticleCard";
-import { ButtonLink } from "@/components/ui/Button";
 import { SectionHead } from "@/components/ui/SectionHead";
 import { CtaBand } from "@/components/sections/CtaBand";
+import { RequestButton } from "@/components/request/RequestButton";
 
 const factIcons = [FileText, Compass, Scale];
 
@@ -76,10 +76,10 @@ export function ServicePageView({ page }: { page: ServicePage }) {
         }
       >
         <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-          <ButtonLink href={`/kontakty?usluga=${page.slug}#zayavka`}>
+          <RequestButton href={`/kontakty?usluga=${page.slug}#zayavka`}>
             Оставить заявку
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
-          </ButtonLink>
+          </RequestButton>
           <Link href="/kakoy-dokument-nuzhen" className="text-link text-[0.9375rem]">
             Не уверены, какой документ нужен?
           </Link>

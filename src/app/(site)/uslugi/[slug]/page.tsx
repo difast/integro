@@ -14,6 +14,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { DraftBadge } from "@/components/ui/DraftBadge";
 import { SectionHead } from "@/components/ui/SectionHead";
 import { CtaBand } from "@/components/sections/CtaBand";
+import { RequestButton } from "@/components/request/RequestButton";
 import { ServicePageView } from "@/components/sections/ServicePageView";
 import { breadcrumbJsonLd, JsonLd } from "@/lib/structured-data";
 
@@ -90,10 +91,10 @@ export default async function ServicePage({ params }: Props) {
           ))}
         </ul>
         <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-          <ButtonLink href={`/kontakty?usluga=${service.slug}#zayavka`}>
+          <RequestButton href={`/kontakty?usluga=${service.slug}#zayavka`}>
             Оставить заявку
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
-          </ButtonLink>
+          </RequestButton>
           <a href="#poryadok" className="text-link text-[0.9375rem]">
             Как проходит работа
           </a>

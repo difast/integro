@@ -1,12 +1,15 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import { Copy, Download, Eraser, Printer } from "lucide-react";
+import { Copy, Eraser, ExternalLink, FileDown, Printer } from "lucide-react";
 import {
-  buildPetition,
+  buildPetitionDocument,
   emptyFields,
+  petitionToHtmlPage,
+  petitionToText,
   proceedingKinds,
   proceedings,
+  type PetitionBlock,
   type PetitionFields,
   type ProceedingKind,
 } from "@/lib/petition";
@@ -58,6 +61,64 @@ const groups: { title: string; fields: FieldDef[] }[] = [
   },
 ];
 
+/**
+ * Предпросмотр на странице: та же раскладка, что в файле Word. В узкой колонке текст
+ * выровнен по левому краю (по ширине — в новой вкладке, при печати и в Word).
+ */
+function PetitionPreview({ blocks }: { blocks: PetitionBlock[] }) {
+  return (
+    <>
+      {blocks.map((block, index) => {
+        switch (block.type) {
+          case "addressee":
+            return (
+              <div key={index} className="mb-6 ml-[30%] sm:ml-[45%]">
+                {block.lines.map((line, i) => (line ? <p key={i}>{line}</p> : <p key={i} aria-hidden="true" className="h-3" />))}
+              </div>
+            );
+          case "title":
+            return (
+              <div key={index} className="mb-4 text-center font-bold">
+                {block.lines.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            );
+          case "paragraph":
+            return (
+              <p key={index} className="mb-2 indent-8 print:text-justify">
+                {block.text}
+              </p>
+            );
+          case "heading":
+            return (
+              <p key={index} className={`mt-4 mb-2 font-bold ${block.align === "center" ? "text-center" : ""}`}>
+                {block.text}
+              </p>
+            );
+          case "list":
+            return (
+              <div key={index} className="mb-2 print:text-justify">
+                {block.items.map((item) => (
+                  <p key={item} className={block.nested ? "pl-8" : "indent-8"}>
+                    {item}
+                  </p>
+                ))}
+              </div>
+            );
+          case "signature":
+            return (
+              <div key={index} className="mt-8 flex justify-between gap-6">
+                <span>{block.left}</span>
+                <span className="text-right">{block.right}</span>
+              </div>
+            );
+        }
+      })}
+    </>
+  );
+}
+
 const controlClass =
   "mt-1.5 block w-full rounded-[var(--radius-control)] border border-line-strong bg-white px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-dark focus:outline-none";
 
@@ -71,7 +132,8 @@ export function PetitionBuilder() {
   const [status, setStatus] = useState("");
   const baseId = useId();
   const proceeding = proceedings[kind];
-  const text = useMemo(() => buildPetition(kind, fields), [kind, fields]);
+  const blocks = useMemo(() => buildPetitionDocument(kind, fields), [kind, fields]);
+  const text = useMemo(() => petitionToText(blocks), [blocks]);
 
   const update = (key: keyof PetitionFields, value: string) => setFields((prev) => ({ ...prev, [key]: value }));
 
@@ -100,17 +162,35 @@ export function PetitionBuilder() {
     }
   };
 
-  const download = () => {
-    const blob = new Blob([`﻿${text.replace(/\n/g, "\r\n")}`], { type: "text/plain;charset=utf-8" });
+  const saveBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "hodataystvo-o-naznachenii-ekspertizy.txt";
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
-    setStatus("Файл сохранён.");
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const downloadWord = async () => {
+    setStatus("Готовим файл…");
+    try {
+      // Библиотека для Word загружается только по нажатию.
+      const { petitionToDocxBlob } = await import("@/lib/petition-docx");
+      saveBlob(await petitionToDocxBlob(blocks), "hodataystvo-o-naznachenii-ekspertizy.docx");
+      setStatus("Файл Word сохранён.");
+    } catch {
+      setStatus("Не удалось сформировать файл Word. Скопируйте текст или воспользуйтесь печатью.");
+    }
+  };
+
+  // Предпросмотр в новой вкладке: страница формируется в браузере, на сервер ничего не уходит.
+  const preview = () => {
+    const url = URL.createObjectURL(new Blob([petitionToHtmlPage(blocks)], { type: "text/html;charset=utf-8" }));
+    const tab = window.open(url, "_blank");
+    setStatus(tab ? "Предпросмотр открыт в новой вкладке." : "Браузер заблокировал новую вкладку — разрешите всплывающие окна для сайта.");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
   const clear = () => {
@@ -226,9 +306,13 @@ export function PetitionBuilder() {
               <Copy aria-hidden="true" className="h-4 w-4" />
               Копировать
             </button>
-            <button type="button" onClick={download} className={buttonClass("outline", "min-h-11 bg-white px-4")}>
-              <Download aria-hidden="true" className="h-4 w-4" />
-              Скачать .txt
+            <button type="button" onClick={preview} className={buttonClass("outline", "min-h-11 bg-white px-4")}>
+              <ExternalLink aria-hidden="true" className="h-4 w-4" />
+              Предпросмотр
+            </button>
+            <button type="button" onClick={downloadWord} className={buttonClass("outline", "min-h-11 bg-white px-4")}>
+              <FileDown aria-hidden="true" className="h-4 w-4" />
+              Скачать Word
             </button>
             <button type="button" onClick={() => window.print()} className={buttonClass("outline", "min-h-11 bg-white px-4")}>
               <Printer aria-hidden="true" className="h-4 w-4" />
@@ -246,16 +330,16 @@ export function PetitionBuilder() {
             <figcaption className="text-[0.8125rem] font-medium text-muted">
               Предпросмотр · {proceeding.code} · в квадратных скобках — незаполненные поля
             </figcaption>
-            <pre
+            <div
               data-testid="petition-text"
-              className="print-area mt-4 max-h-[70vh] overflow-auto font-sans text-[0.875rem] leading-relaxed whitespace-pre-wrap text-ink"
+              className="print-area mt-4 max-h-[70vh] overflow-auto font-[Times_New_Roman,Times,serif] text-[0.875rem] leading-relaxed text-ink"
             >
-              {text}
-            </pre>
+              <PetitionPreview blocks={blocks} />
+            </div>
           </figure>
           <p className="text-[0.8125rem] leading-relaxed text-muted">
-            Данные не отправляются на сервер и не сохраняются: после закрытия страницы поля очищаются. Скопируйте или
-            скачайте текст, чтобы продолжить работу в текстовом редакторе.
+            Данные не отправляются на сервер и не сохраняются: после закрытия страницы поля очищаются. Скачайте файл
+            Word, чтобы продолжить работу в текстовом редакторе.
           </p>
         </div>
       </div>

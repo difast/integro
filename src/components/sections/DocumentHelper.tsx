@@ -15,6 +15,7 @@ import {
   type ResultKind,
 } from "@/lib/document-helper";
 import { buttonClass } from "@/components/ui/Button";
+import { RequestTrigger } from "@/components/request/RequestModal";
 
 const otherKinds = (kind: ResultKind) =>
   (["report", "specialist", "court"] as const).filter((item) => item !== kind);
@@ -138,10 +139,10 @@ export function DocumentHelper() {
             </section>
 
             <div className="space-y-3 rounded-[var(--radius-card)] border border-line p-6">
-              <Link href={requestHref(result, answers)} className={buttonClass("primary", "w-full")}>
+              <RequestTrigger href={requestHref(result, answers)} className={buttonClass("primary", "w-full")}>
                 Перейти к заявке
                 <ArrowRight aria-hidden="true" className="h-4 w-4" />
-              </Link>
+              </RequestTrigger>
               {result.service ? (
                 <Link href={result.service.href} className={buttonClass("outline", "w-full")}>
                   {result.service.label}

@@ -4,7 +4,7 @@ import { pageMetadata } from "@/lib/metadata";
 import { organizationDetails } from "@/lib/organization";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DetailsTable } from "@/components/ui/DetailsTable";
-import { ButtonLink } from "@/components/ui/Button";
+import { RequestButton } from "@/components/request/RequestButton";
 
 const doc = legalDocuments.organization;
 
@@ -30,7 +30,7 @@ export default function OrganizationPage() {
           </h2>
           <DetailsTable rows={organizationDetails()} />
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href="/kontakty#zayavka">Оставить заявку</ButtonLink>
+            <RequestButton>Оставить заявку</RequestButton>
           </div>
         </section>
         <aside aria-labelledby="docs-title" className="self-start rounded-[var(--radius-card)] bg-white p-6 lg:col-span-4">

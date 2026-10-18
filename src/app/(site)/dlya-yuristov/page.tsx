@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ButtonLink } from "@/components/ui/Button";
 import { SectionHead } from "@/components/ui/SectionHead";
 import { PetitionBuilder } from "@/components/sections/PetitionBuilder";
+import { RequestButton } from "@/components/request/RequestButton";
 
 export const metadata = pageMetadata({
   title: "Для юристов: вопросы эксперту и шаблон ходатайства",
@@ -175,7 +176,7 @@ export default function LawyersPage() {
               id="shablon-title"
               eyebrow="Шаблон"
               title="Редактируемый шаблон ходатайства"
-              lead="Выберите вид судопроизводства и заполните поля — текст ходатайства формируется справа. Его можно скопировать, скачать или распечатать."
+              lead="Выберите вид судопроизводства и заполните поля — документ формируется справа. Его можно открыть в новой вкладке, скачать в Word, скопировать или распечатать."
             />
             <p className="mt-6 rounded-[var(--radius-control)] border-l-[3px] border-bronze bg-white px-4 py-3 text-[0.875rem] leading-relaxed text-ink">
               Шаблон — отправная точка. Он требует адаптации к обстоятельствам дела и не гарантирует удовлетворения
@@ -267,10 +268,10 @@ export default function LawyersPage() {
                 принимает суд.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <ButtonLink href="/kontakty?usluga=sudebnaya-ekspertiza#zayavka" variant="bronze">
+                <RequestButton href="/kontakty?usluga=sudebnaya-ekspertiza#zayavka" variant="bronze">
                   Оставить заявку
                   <ArrowRight aria-hidden="true" className="h-4 w-4" />
-                </ButtonLink>
+                </RequestButton>
                 <ButtonLink href="/uslugi/sudebnaya-ekspertiza" variant="outline-light">
                   О судебной экспертизе
                 </ButtonLink>

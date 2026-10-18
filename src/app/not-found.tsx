@@ -3,6 +3,7 @@ import Link from "next/link";
 import { mainNav } from "@/config/content";
 import { ButtonLink } from "@/components/ui/Button";
 import { SiteChrome } from "@/components/layout/SiteChrome";
+import { RequestButton } from "@/components/request/RequestButton";
 
 export const metadata: Metadata = {
   title: "Страница не найдена",
@@ -26,9 +27,9 @@ export default function NotFound() {
           </p>
           <div className="mt-10 flex flex-wrap gap-3">
             <ButtonLink href="/">На главную</ButtonLink>
-            <ButtonLink href="/kontakty#zayavka" variant="outline">
+            <RequestButton variant="outline">
               Оставить заявку
-            </ButtonLink>
+            </RequestButton>
           </div>
           <nav
             aria-label="Разделы сайта"

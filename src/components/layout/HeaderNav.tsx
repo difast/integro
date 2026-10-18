@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { Menu, X } from "lucide-react";
 import type { NavItem } from "@/config/content";
+import { RequestTrigger } from "@/components/request/RequestModal";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -125,12 +126,13 @@ export function MobileMenu({ items, audiences, phone, email, workingHours }: Mob
             ))}
           </ul>
           <div className="mt-8 space-y-4">
-            <Link
+            <RequestTrigger
               href="/kontakty#zayavka"
+              onOpen={() => setOpen(false)}
               className="flex min-h-12 w-full items-center justify-center rounded-[var(--radius-control)] bg-dark px-6 font-medium text-white hover:bg-dark-800"
             >
               Оставить заявку
-            </Link>
+            </RequestTrigger>
             {phone ? (
               <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="block text-lg font-medium text-ink">
                 {phone}

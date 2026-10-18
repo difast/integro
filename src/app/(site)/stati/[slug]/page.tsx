@@ -11,6 +11,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { ArticleCard } from "@/components/ui/ArticleCard";
 import { SectionHead } from "@/components/ui/SectionHead";
 import { Breadcrumbs } from "@/components/layout/PageHeader";
+import { RequestButton } from "@/components/request/RequestButton";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -165,9 +166,9 @@ export default async function ArticlePage({ params }: Props) {
           <div className="rounded-[var(--radius-card)] bg-dark p-6 text-white">
             <p className="font-medium text-white">Нужна консультация по вашей ситуации?</p>
             <p className="mt-2 text-[0.875rem] leading-relaxed text-on-dark">Опишите задачу — ответим после предварительного анализа.</p>
-            <ButtonLink href="/kontakty#zayavka" variant="bronze" className="mt-5 w-full min-h-11 px-4 text-[0.875rem]">
+            <RequestButton variant="bronze" className="mt-5 w-full min-h-11 px-4 text-[0.875rem]">
               Оставить заявку
-            </ButtonLink>
+            </RequestButton>
           </div>
         </aside>
       </div>

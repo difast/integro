@@ -9,6 +9,8 @@ import { articleCategories, getArticles } from "@/lib/articles";
 import { getSiteUrl } from "@/lib/site";
 import { ArticleCard } from "@/components/ui/ArticleCard";
 import { ButtonLink } from "@/components/ui/Button";
+import { RequestButton } from "@/components/request/RequestButton";
+import { RequestTrigger } from "@/components/request/RequestModal";
 import { ScrollItem, ScrollRow } from "@/components/ui/ScrollRow";
 import { SectionHead } from "@/components/ui/SectionHead";
 import { CompanyVideo } from "@/components/sections/CompanyVideo";
@@ -56,9 +58,9 @@ export default function HomePage() {
                 источники.
               </p>
               <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-4">
-                <ButtonLink href="/kontakty#zayavka" className="px-7">
+                <RequestButton className="px-7">
                   Оставить заявку
-                </ButtonLink>
+                </RequestButton>
                 <Link href="/uslugi" className="text-link inline-flex items-center gap-2 text-[0.9375rem]">
                   Все услуги
                   <ArrowRight aria-hidden="true" className="h-4 w-4" />
@@ -86,7 +88,7 @@ export default function HomePage() {
             <ul className="grid overflow-hidden rounded-[var(--radius-card)] bg-mist sm:grid-cols-2 lg:grid-cols-4">
               {quickActions.map((action) => (
                 <li key={action.href} className="border-line-strong/50 not-last:border-b sm:not-last:border-b-0 sm:[&:nth-child(odd)]:border-r lg:not-last:border-r lg:[&:nth-child(odd)]:border-r">
-                  <Link
+                  <RequestTrigger
                     href={action.href}
                     className="group relative flex h-full items-start justify-between gap-4 px-5 py-5 transition-colors hover:bg-white sm:px-6 sm:py-6"
                   >
@@ -99,7 +101,7 @@ export default function HomePage() {
                       aria-hidden="true"
                       className="absolute inset-x-5 bottom-0 h-[3px] origin-left scale-x-0 bg-bronze transition-transform group-hover:scale-x-100 sm:inset-x-6"
                     />
-                  </Link>
+                  </RequestTrigger>
                 </li>
               ))}
             </ul>

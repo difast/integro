@@ -182,70 +182,166 @@ function value(text: string, placeholder: string): string {
   return trimmed ? trimmed : `[${placeholder}]`;
 }
 
-/** Нумерованный список из многострочного поля; пустые строки отбрасываются. */
-function numbered(text: string, placeholder: string): string {
+/** Нумерованный список из многострочного поля; пустые строки и ручная нумерация отбрасываются. */
+function numberedItems(text: string, placeholder: string): string[] {
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.replace(/^\s*\d+[.)]\s*/, "").trim())
     .filter(Boolean);
-  if (lines.length === 0) return `1. [${placeholder}]`;
-  return lines.map((line, index) => `${index + 1}. ${line}`).join("\n");
+  return (lines.length ? lines : [`[${placeholder}]`]).map((line, index) => `${index + 1}. ${line}`);
+}
+
+/**
+ * Документ как набор блоков с оформлением: шапка — блоком справа, заголовок и «ПРОШУ» —
+ * по центру, основной текст — по ширине с абзацным отступом, дата слева и подпись справа.
+ * Из этой структуры собираются текст, предпросмотр и файл Word.
+ */
+export type PetitionBlock =
+  | { type: "addressee"; lines: string[] }
+  | { type: "title"; lines: string[] }
+  | { type: "paragraph"; text: string }
+  | { type: "heading"; text: string; align: "center" | "left" }
+  | { type: "list"; items: string[]; nested?: boolean }
+  | { type: "signature"; left: string; right: string };
+
+export function buildPetitionDocument(kind: ProceedingKind, fields: PetitionFields): PetitionBlock[] {
+  const p = proceedings[kind];
+  const status = value(fields.applicantStatus, "процессуальный статус");
+  const caseWord = kind === "administrative" ? "административное дело" : kind === "arbitration" ? "дело" : "гражданское дело";
+  const caseNumber = value(fields.caseNumber, p.casePlaceholder);
+  const expert = value(fields.expertOrganization, "наименование экспертной организации или Ф. И. О. эксперта");
+
+  return [
+    {
+      type: "addressee",
+      lines: [
+        `В ${value(fields.court, p.courtPlaceholder)}`,
+        "",
+        `от: ${value(fields.applicantName, "Ф. И. О. или наименование заявителя")}, ${status}`,
+        value(fields.applicantContacts, "адрес, телефон, адрес электронной почты"),
+        "",
+        `${caseWord[0]!.toUpperCase()}${caseWord.slice(1)} № ${caseNumber}`,
+        `Лица, участвующие в деле: ${value(fields.participants, "наименования / Ф. И. О. и процессуальный статус других участников")}`,
+      ],
+    },
+    { type: "title", lines: ["ХОДАТАЙСТВО", "о назначении судебной экспертизы"] },
+    { type: "paragraph", text: `В производстве суда находится ${caseWord} № ${caseNumber}.` },
+    { type: "paragraph", text: value(fields.circumstances, "обстоятельства дела, для установления которых требуются специальные знания") },
+    {
+      type: "paragraph",
+      text: value(
+        fields.justification,
+        "обоснование: почему эти обстоятельства имеют значение для дела и почему для их установления необходимы специальные знания",
+      ),
+    },
+    { type: "paragraph", text: `Объект исследования: ${value(fields.objectInfo, "описание объекта, его местонахождение, возможность осмотра")}.` },
+    { type: "paragraph", text: `Материалы, которые могут быть предоставлены эксперту: ${value(fields.materials, "перечень документов и материалов")}.` },
+    { type: "paragraph", text: `Проведение экспертизы предлагаю поручить: ${expert}.` },
+    {
+      type: "paragraph",
+      text: value(
+        fields.expertDetails,
+        "сведения об экспертах (образование, специальность, стаж), сроке и стоимости проведения экспертизы — по ответу экспертной организации",
+      ),
+    },
+    { type: "paragraph", text: `На основании изложенного, в соответствии со ${p.basis},` },
+    { type: "heading", text: "ПРОШУ:", align: "center" },
+    {
+      type: "list",
+      items: [
+        `1. Назначить по делу ${value(fields.expertiseType, "вид экспертизы")} экспертизу.`,
+        `2. Поручить проведение экспертизы ${expert}.`,
+        "3. Поставить на разрешение эксперта следующие вопросы:",
+      ],
+    },
+    { type: "list", items: numberedItems(fields.questions, "вопрос эксперту"), nested: true },
+    { type: "list", items: ["4. Предоставить в распоряжение эксперта материалы дела и объект исследования."] },
+    { type: "paragraph", text: p.payment },
+    { type: "heading", text: "Приложения:", align: "left" },
+    {
+      type: "list",
+      items: numberedItems(fields.attachments, "письмо экспертной организации о возможности проведения экспертизы, сроке и стоимости"),
+    },
+    {
+      type: "signature",
+      left: value(fields.date, "дата"),
+      right: value(fields.signatory, "подпись, Ф. И. О.; для представителя — реквизиты доверенности"),
+    },
+  ];
+}
+
+/** Простой текст (для копирования и .txt). */
+export function petitionToText(blocks: PetitionBlock[]): string {
+  const parts: string[] = [];
+  for (const block of blocks) {
+    if (block.type === "addressee" || block.type === "title") parts.push(block.lines.join("\n"));
+    else if (block.type === "paragraph" || block.type === "heading") parts.push(block.text);
+    else if (block.type === "list") parts.push(block.items.map((item) => (block.nested ? `   ${item}` : item)).join("\n"));
+    else parts.push(`${block.left}\n${block.right}`);
+  }
+  return parts.join("\n\n");
 }
 
 /** Текст ходатайства для выбранного вида производства. */
 export function buildPetition(kind: ProceedingKind, fields: PetitionFields): string {
-  const p = proceedings[kind];
-  const status = value(fields.applicantStatus, "процессуальный статус");
-  const caseWord = kind === "administrative" ? "административное дело" : kind === "arbitration" ? "дело" : "гражданское дело";
-  const participants = fields.participants.trim()
-    ? `Лица, участвующие в деле: ${fields.participants.trim()}`
-    : "Лица, участвующие в деле: [наименования / Ф. И. О. и процессуальный статус других участников]";
+  return petitionToText(buildPetitionDocument(kind, fields));
+}
 
-  return [
-    `В ${value(fields.court, p.courtPlaceholder)}`,
-    "",
-    `от: ${value(fields.applicantName, "Ф. И. О. или наименование заявителя")}, ${status}`,
-    `${value(fields.applicantContacts, "адрес, телефон, адрес электронной почты")}`,
-    "",
-    `${caseWord[0]!.toUpperCase()}${caseWord.slice(1)} № ${value(fields.caseNumber, p.casePlaceholder)}`,
-    participants,
-    "",
-    "ХОДАТАЙСТВО",
-    "о назначении судебной экспертизы",
-    "",
-    `В производстве суда находится ${caseWord} № ${value(fields.caseNumber, p.casePlaceholder)}.`,
-    "",
-    value(fields.circumstances, "обстоятельства дела, для установления которых требуются специальные знания"),
-    "",
-    value(
-      fields.justification,
-      "обоснование: почему эти обстоятельства имеют значение для дела и почему для их установления необходимы специальные знания",
-    ),
-    "",
-    `Объект исследования: ${value(fields.objectInfo, "описание объекта, его местонахождение, возможность осмотра")}.`,
-    `Материалы, которые могут быть предоставлены эксперту: ${value(fields.materials, "перечень документов и материалов")}.`,
-    "",
-    `Проведение экспертизы предлагаю поручить: ${value(fields.expertOrganization, "наименование экспертной организации или Ф. И. О. эксперта")}.`,
-    `${value(fields.expertDetails, "сведения об экспертах (образование, специальность, стаж), сроке и стоимости проведения экспертизы — по ответу экспертной организации")}`,
-    "",
-    `На основании изложенного, в соответствии со ${p.basis},`,
-    "",
-    "ПРОШУ:",
-    "",
-    `1. Назначить по делу ${value(fields.expertiseType, "вид экспертизы")} экспертизу.`,
-    `2. Поручить проведение экспертизы ${value(fields.expertOrganization, "наименование экспертной организации или Ф. И. О. эксперта")}.`,
-    "3. Поставить на разрешение эксперта следующие вопросы:",
-    numbered(fields.questions, "вопрос эксперту"),
-    "4. Предоставить в распоряжение эксперта материалы дела и объект исследования.",
-    "",
-    p.payment,
-    "",
-    "Приложения:",
-    numbered(fields.attachments, "письмо экспертной организации о возможности проведения экспертизы, сроке и стоимости"),
-    "",
-    `${value(fields.date, "дата")}`,
-    `${value(fields.signatory, "подпись, Ф. И. О.; для представителя — реквизиты доверенности")}`,
-  ].join("\n");
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
+}
+
+/** Отдельная HTML-страница для предпросмотра в новой вкладке (A4, шрифт как в документе). */
+export function petitionToHtmlPage(blocks: PetitionBlock[]): string {
+  const body = blocks
+    .map((block) => {
+      switch (block.type) {
+        case "addressee":
+          return `<div class="addressee">${block.lines.map((l) => (l ? `<p>${escapeHtml(l)}</p>` : '<p class="gap"></p>')).join("")}</div>`;
+        case "title":
+          return `<div class="title">${block.lines.map((l) => `<p>${escapeHtml(l)}</p>`).join("")}</div>`;
+        case "paragraph":
+          return `<p class="body">${escapeHtml(block.text)}</p>`;
+        case "heading":
+          return `<p class="heading ${block.align}">${escapeHtml(block.text)}</p>`;
+        case "list":
+          return `<div class="list${block.nested ? " nested" : ""}">${block.items.map((i) => `<p>${escapeHtml(i)}</p>`).join("")}</div>`;
+        case "signature":
+          return `<div class="signature"><span>${escapeHtml(block.left)}</span><span>${escapeHtml(block.right)}</span></div>`;
+      }
+    })
+    .join("\n");
+
+  return `<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>Ходатайство о назначении судебной экспертизы — предпросмотр</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e8edf1; font-family: "Times New Roman", Times, serif; color: #000; }
+  .toolbar { position: sticky; top: 0; display: flex; gap: 12px; align-items: center; justify-content: center; padding: 12px; background: #263746; color: #fff; font: 14px/1.4 system-ui, sans-serif; }
+  .toolbar button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 0; background: #b49a72; color: #1d2b37; cursor: pointer; }
+  .page { width: 210mm; max-width: 100%; min-height: 297mm; margin: 24px auto; padding: 20mm 15mm 20mm 30mm; background: #fff; box-shadow: 0 10px 40px -20px rgba(0,0,0,.4); font-size: 12pt; line-height: 1.5; }
+  p { margin: 0; }
+  .addressee { margin-left: 50%; margin-bottom: 24pt; }
+  .addressee .gap { height: 12pt; }
+  .title { text-align: center; font-weight: bold; margin-bottom: 12pt; }
+  .body { text-align: justify; text-indent: 1.25cm; margin-bottom: 6pt; }
+  .heading { font-weight: bold; margin: 12pt 0 6pt; }
+  .heading.center { text-align: center; }
+  .list { margin-bottom: 6pt; text-align: justify; }
+  .list p { text-indent: 1.25cm; }
+  .list.nested p { padding-left: 1.25cm; text-indent: 0; }
+  .signature { display: flex; justify-content: space-between; gap: 24pt; margin-top: 36pt; }
+  .signature span:last-child { text-align: right; }
+  @media (max-width: 640px) { .page { padding: 16px; min-height: 0; margin: 0; } .addressee { margin-left: 30%; } }
+  @media print { body { background: #fff; } .toolbar { display: none; } .page { margin: 0; box-shadow: none; width: auto; min-height: 0; padding: 0; } @page { size: A4; margin: 20mm 15mm 20mm 30mm; } }
+</style></head>
+<body>
+<div class="toolbar"><span>Предпросмотр ходатайства</span><button type="button" onclick="window.print()">Печать</button></div>
+<main class="page">
+${body}
+</main>
+</body></html>`;
 }
 
 /** Нормы, упомянутые в тексте ходатайства (для проверки, что кодексы не смешиваются). */

@@ -1,5 +1,6 @@
 import { objectCodes, objectLabels, type ObjectType } from "@/lib/document-helper";
 import { getServicePage } from "@/config/service-pages";
+import { getService } from "@/config/services";
 
 /**
  * Контекст обращения по адресу страницы с формой: с какой страницы услуги пришёл
@@ -13,12 +14,18 @@ const recommendationLabels: Record<string, string> = {
   konsultaciya: "нужна консультация",
 };
 
+function serviceTitle(slug: string | null | undefined): string | null {
+  if (!slug) return null;
+  return getServicePage(slug)?.shortTitle ?? getService(slug)?.title ?? null;
+}
+
 export function describeRequestContext(sourcePage: string | null): string | null {
   if (!sourcePage) return null;
-  const query = sourcePage.split("?")[1]?.split("#")[0];
-  if (!query) return null;
-  const params = new URLSearchParams(query);
+  const [path = "", rest = ""] = sourcePage.split("?");
+  const params = new URLSearchParams(rest.split("#")[0]);
   const parts: string[] = [];
+
+  if (params.get("forma") === "okno") parts.push("Всплывающая форма");
 
   const recommendation = params.get("rekomendaciya");
   if (recommendation && recommendationLabels[recommendation]) {
@@ -29,8 +36,12 @@ export function describeRequestContext(sourcePage: string | null): string | null
     );
   }
 
-  const page = getServicePage(params.get("usluga") ?? "");
-  if (page) parts.push(`Страница услуги: ${page.shortTitle}`);
+  // Страница услуги: из параметра usluga (переход на «Контакты») или из адреса страницы, где открыто окно.
+  const pathSlug = /^\/uslugi\/([a-z0-9-]+)$/.exec(path)?.[1];
+  const fromParam = getServicePage(params.get("usluga") ?? "")?.shortTitle ?? null;
+  const fromPath = serviceTitle(pathSlug);
+  const title = fromParam ?? fromPath;
+  if (title) parts.push(`Страница услуги: ${title}`);
 
   return parts.length > 0 ? parts.join("; ").slice(0, 300) : null;
 }

@@ -1,11 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { buildPetition, codesMentioned, emptyFields, proceedingKinds, proceedings } from "@/lib/petition";
+import { buildPetition, buildPetitionDocument, codesMentioned, emptyFields, petitionToHtmlPage, proceedingKinds, proceedings } from "@/lib/petition";
 
 const ownCodes = {
   civil: ["ГПК РФ", "Гражданского процессуального"],
   arbitration: ["АПК РФ", "Арбитражного процессуального"],
   administrative: ["КАС РФ", "административного судопроизводства"],
 } as const;
+
+describe("buildPetitionDocument", () => {
+  it("lays out the document: addressee on the right, centered title, justified body, signature row", () => {
+    const blocks = buildPetitionDocument("civil", { ...emptyFields, court: "Тверской районный суд", date: "18.10.2026", signatory: "Иванов И. И." });
+    expect(blocks[0]).toMatchObject({ type: "addressee" });
+    expect((blocks[0] as { lines: string[] }).lines[0]).toBe("В Тверской районный суд");
+    expect(blocks[1]).toEqual({ type: "title", lines: ["ХОДАТАЙСТВО", "о назначении судебной экспертизы"] });
+    expect(blocks.find((b) => b.type === "heading" && b.text === "ПРОШУ:")).toMatchObject({ align: "center" });
+    expect(blocks.at(-1)).toEqual({ type: "signature", left: "18.10.2026", right: "Иванов И. И." });
+  });
+
+  it("escapes user input in the HTML preview", () => {
+    const html = petitionToHtmlPage(buildPetitionDocument("civil", { ...emptyFields, court: "<script>alert(1)</script>" }));
+    expect(html).not.toContain("<script>alert(1)</script>");
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).toContain('class="addressee"');
+    expect(html).toContain("text-align: center");
+  });
+});
 
 describe("buildPetition", () => {
   it.each(proceedingKinds)("%s: только нормы своего кодекса", (kind) => {
@@ -41,7 +60,7 @@ describe("buildPetition", () => {
     });
     expect(text).toContain("В Арбитражный суд города Москвы");
     expect(text).toContain("Дело № А40-1/2026");
-    expect(text).toContain("1. Какова стоимость доли?\n2. Какие факторы существенны?");
+    expect(text).toContain("   1. Какова стоимость доли?\n   2. Какие факторы существенны?");
     expect(text).toContain("Назначить по делу оценочную экспертизу");
     expect(text).toContain("статья 108 АПК РФ");
     expect(text).not.toContain("[вопрос эксперту]");

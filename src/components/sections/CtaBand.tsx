@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { company } from "@/config/company";
-import { ButtonLink } from "@/components/ui/Button";
+import { RequestButton } from "@/components/request/RequestButton";
 
 type CtaBandProps = {
   title?: string;
@@ -30,10 +30,10 @@ export function CtaBand({
             <p className="mt-5 max-w-[38rem] text-[1.0625rem] leading-relaxed text-on-dark">{text}</p>
           </div>
           <div className="lg:col-span-5 lg:justify-self-end">
-            <ButtonLink href={href} variant="bronze" className="w-full sm:w-auto">
+            <RequestButton href={href} variant="bronze" className="w-full sm:w-auto">
               Оставить заявку
               <ArrowRight aria-hidden="true" className="h-4 w-4" />
-            </ButtonLink>
+            </RequestButton>
             {email || workingHours ? (
               <p className="mt-5 text-[0.875rem] text-on-dark">
                 {email ? (
