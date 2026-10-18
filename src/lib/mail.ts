@@ -1,5 +1,6 @@
 import "server-only";
 import nodemailer from "nodemailer";
+import { company } from "@/config/company";
 
 type MailConfig = {
   host: string;
@@ -11,18 +12,23 @@ type MailConfig = {
   to: string[];
 };
 
-/** Конфигурация SMTP из переменных окружения. null — отправка не настроена. */
+/**
+ * Конфигурация SMTP из переменных окружения. null — отправка не настроена.
+ * Получатели — MAIL_TO; если переменная не задана, письма идут на почту компании
+ * из src/config/company.ts, а при её отсутствии — на адрес SMTP_USER.
+ */
 export function getMailConfig(): MailConfig | null {
   const env = process.env;
   const host = env.SMTP_HOST?.trim();
   const user = env.SMTP_USER?.trim();
   const password = env.SMTP_PASSWORD;
-  const to = (env.MAIL_TO ?? "")
+  if (!host || !user || !password) return null;
+
+  const listed = (env.MAIL_TO ?? "")
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-
-  if (!host || !user || !password || to.length === 0) return null;
+  const to = listed.length > 0 ? listed : [company.contacts.email ?? user];
 
   const port = Number(env.SMTP_PORT ?? 465);
   return {

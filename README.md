@@ -119,7 +119,8 @@ Open Graph и разметка Article.
   или `DATABASE_SSL=true`; корневой сертификат провайдера — в `DATABASE_CA_CERT`.
 - `ADMIN_PASSWORD` — пароль панели заявок `/admin`, не короче 12 символов. Пустой — вход отключён.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `MAIL_TO` — уведомления
-  о заявках на почту. Без базы и без SMTP форма отключена и честно сообщает, что приём заявок не подключён.
+  о заявках на почту. Обязательны `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`; без `MAIL_TO` письма идут на почту
+  компании (info@intsoftholding.ru). При запуске в журнал пишется строка `[mail] notifications on/off`. Без базы и без SMTP форма отключена и честно сообщает, что приём заявок не подключён.
 
 Секреты задаются только в панели хостинга, в репозиторий не попадают (`.env*` в `.gitignore`).
 

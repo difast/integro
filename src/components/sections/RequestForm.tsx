@@ -101,7 +101,7 @@ export function RequestForm({
               {showSetupHint ? (
                 <p className="mt-1">
                   Для владельца сайта: задайте переменную DATABASE_URL (база заявок) и при необходимости SMTP_HOST,
-                  SMTP_USER, SMTP_PASSWORD и MAIL_TO для уведомлений (см. .env.example). Это сообщение видно только в
+                  SMTP_USER и SMTP_PASSWORD для уведомлений (см. .env.example). Это сообщение видно только в
                   режиме разработки.
                 </p>
               ) : hasContacts ? (
