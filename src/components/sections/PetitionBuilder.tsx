@@ -119,6 +119,9 @@ function PetitionPreview({ blocks }: { blocks: PetitionBlock[] }) {
   );
 }
 
+// Кнопки действий одинаковой высоты, во всю ширину своей ячейки, текст в одну строку.
+const actionClass = "min-h-11 w-full gap-2 px-3 text-[0.875rem] whitespace-nowrap";
+
 const controlClass =
   "mt-1.5 block w-full rounded-[var(--radius-control)] border border-line-strong bg-white px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-dark focus:outline-none";
 
@@ -206,7 +209,7 @@ export function PetitionBuilder() {
           <p className="text-[0.9375rem] font-medium text-ink" aria-hidden="true">
             Вид судопроизводства
           </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <div className="mt-3 grid gap-2">
             {proceedingKinds.map((item) => (
               <label
                 key={item}
@@ -301,25 +304,27 @@ export function PetitionBuilder() {
 
       <div className="min-w-0 lg:col-span-6">
         <div className="space-y-4 lg:sticky lg:top-6">
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={copy} className={buttonClass("primary", "min-h-11 px-4")}>
-              <Copy aria-hidden="true" className="h-4 w-4" />
-              Копировать
-            </button>
-            <button type="button" onClick={preview} className={buttonClass("outline", "min-h-11 bg-white px-4")}>
-              <ExternalLink aria-hidden="true" className="h-4 w-4" />
-              Предпросмотр
-            </button>
-            <button type="button" onClick={downloadWord} className={buttonClass("outline", "min-h-11 bg-white px-4")}>
-              <FileDown aria-hidden="true" className="h-4 w-4" />
+          {/* Ровная сетка: основные действия — в первом ряду, вспомогательные — ниже.
+              Когда колонка узкая (lg–xl), кнопки встают по две в ряд. */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-6 lg:grid-cols-2 xl:grid-cols-6">
+            <button type="button" onClick={downloadWord} className={buttonClass("primary", `${actionClass} sm:col-span-3 lg:col-span-1 xl:col-span-3`)}>
+              <FileDown aria-hidden="true" className="h-4 w-4 shrink-0" />
               Скачать Word
             </button>
-            <button type="button" onClick={() => window.print()} className={buttonClass("outline", "min-h-11 bg-white px-4")}>
-              <Printer aria-hidden="true" className="h-4 w-4" />
+            <button type="button" onClick={preview} className={buttonClass("outline", `${actionClass} bg-white sm:col-span-3 lg:col-span-1 xl:col-span-3`)}>
+              <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0" />
+              Предпросмотр
+            </button>
+            <button type="button" onClick={copy} className={buttonClass("outline", `${actionClass} bg-white sm:col-span-2 lg:col-span-1 xl:col-span-2`)}>
+              <Copy aria-hidden="true" className="h-4 w-4 shrink-0" />
+              Копировать
+            </button>
+            <button type="button" onClick={() => window.print()} className={buttonClass("outline", `${actionClass} bg-white sm:col-span-2 lg:col-span-1 xl:col-span-2`)}>
+              <Printer aria-hidden="true" className="h-4 w-4 shrink-0" />
               Печать
             </button>
-            <button type="button" onClick={clear} className={buttonClass("outline", "min-h-11 bg-white px-4")}>
-              <Eraser aria-hidden="true" className="h-4 w-4" />
+            <button type="button" onClick={clear} className={buttonClass("outline", `${actionClass} col-span-2 bg-white`)}>
+              <Eraser aria-hidden="true" className="h-4 w-4 shrink-0" />
               Очистить
             </button>
           </div>
