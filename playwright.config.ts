@@ -16,6 +16,7 @@ const common = {
   SMTP_PASSWORD: "",
   MAIL_TO: "",
   NODE_ENV: "production",
+  SITE_URL: "https://intsoftholding.ru",
 };
 
 export default defineConfig({

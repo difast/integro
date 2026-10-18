@@ -58,7 +58,7 @@ export function SiteHeader() {
         <div className="container-page flex h-[56px] items-stretch justify-between gap-6">
           <DesktopNav items={mainNav} />
           {workingHours ? (
-            <p className="flex items-center gap-2 text-[0.8125rem] text-muted">
+            <p className="hidden items-center gap-2 text-[0.8125rem] whitespace-nowrap text-muted xl:flex">
               <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-bronze" />
               {workingHours}
             </p>

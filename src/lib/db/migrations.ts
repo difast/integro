@@ -54,4 +54,10 @@ export const migrations: Migration[] = [
       CREATE INDEX admin_login_attempts_time_idx ON admin_login_attempts (attempted_at);
     `,
   },
+  {
+    id: "002_request_context",
+    sql: `
+      ALTER TABLE requests ADD COLUMN context text CHECK (char_length(context) <= 300);
+    `,
+  },
 ];

@@ -59,6 +59,7 @@ export default async function AdminRequestPage({ params }: Props) {
     },
     { label: "Направление", value: request.serviceTitle },
     { label: "Страница отправки", value: request.sourcePage ?? "—" },
+    { label: "Контекст обращения", value: request.context ?? "—" },
     { label: "Согласие на обработку ПД", value: `Отмечено, редакция от ${request.consentRevision}` },
     { label: "Изменена", value: `${formatMoscowDateTime(request.updatedAt)} (МСК)` },
   ];

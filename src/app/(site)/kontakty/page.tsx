@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { legalDocuments } from "@/config/legal";
 import { services } from "@/config/services";
+import { formServiceFor } from "@/config/service-pages";
 import { isDatabaseConfigured } from "@/lib/db";
 import { isMailConfigured } from "@/lib/mail";
 import { pageMetadata } from "@/lib/metadata";
@@ -27,7 +28,8 @@ const shortDetails = ["Юридический адрес", "ОГРН", "ИНН",
 export default async function ContactsPage({ searchParams }: Props) {
   const { usluga } = await searchParams;
   const requested = Array.isArray(usluga) ? usluga[0] : usluga;
-  const defaultService = services.some((service) => service.slug === requested) ? requested : "";
+  // usluga может указывать на базовое направление или отдельную страницу услуги.
+  const defaultService = formServiceFor(requested);
   const details = organizationDetails().filter((row) => shortDetails.includes(row.label));
 
   return (

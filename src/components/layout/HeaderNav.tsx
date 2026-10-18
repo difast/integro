@@ -15,7 +15,7 @@ export function DesktopNav({ items }: { items: NavItem[] }) {
 
   return (
     <nav aria-label="Основная навигация" className="h-full">
-      <ul className="flex h-full items-stretch gap-9">
+      <ul className="flex h-full items-stretch gap-6 xl:gap-8">
         {items.map((item) => {
           const active = isActive(pathname, item.href);
           return (
@@ -23,7 +23,7 @@ export function DesktopNav({ items }: { items: NavItem[] }) {
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex items-center text-[1rem] transition-colors after:absolute after:inset-x-0 after:-bottom-px after:h-[2px] after:transition-colors ${
+                className={`relative flex items-center text-[0.9375rem] whitespace-nowrap transition-colors xl:text-[1rem] after:absolute after:inset-x-0 after:-bottom-px after:h-[2px] after:transition-colors ${
                   active ? "font-medium text-ink after:bg-bronze" : "text-body after:bg-transparent hover:text-ink hover:after:bg-line-strong"
                 }`}
               >

@@ -17,6 +17,7 @@ type CsvRequest = {
   message: string;
   notes: string;
   sourcePage: string | null;
+  context?: string | null;
 };
 
 // Символы, с которых табличный редактор может начать формулу (CSV/формульная инъекция).
@@ -53,6 +54,7 @@ const header = [
   "Текст обращения",
   "Заметки",
   "Страница",
+  "Контекст обращения",
   "ID",
 ];
 
@@ -70,6 +72,7 @@ export function requestsToCsv(rows: CsvRequest[]): string {
         row.message,
         row.notes,
         row.sourcePage ?? "",
+        row.context ?? "",
         row.id,
       ]
         .map(csvCell)

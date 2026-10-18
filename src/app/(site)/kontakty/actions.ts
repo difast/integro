@@ -6,11 +6,11 @@ import { getClientIp } from "@/lib/client-ip";
 import { describeDbError, isDatabaseConfigured } from "@/lib/db";
 import { isMailConfigured, sendMail } from "@/lib/mail";
 import { isRateLimited } from "@/lib/rate-limit";
-import { limits, type RequestFields, type RequestFormState } from "@/lib/request-form";
+import { limits, validateRequest, type RequestFields, type RequestFormState } from "@/lib/request-form";
+import { describeRequestContext } from "@/lib/requests/context";
 import { createRequest, isUuid } from "@/lib/requests/repository";
 import { absoluteUrl } from "@/lib/site";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MIN_FILL_MS = 3_000;
 
 function field(formData: FormData, key: string, max: number): string {
@@ -47,24 +47,14 @@ export async function submitRequest(_prev: RequestFormState, formData: FormData)
     };
   }
 
-  const fieldErrors: RequestFormState["fieldErrors"] = {};
-  if (values.name.length < 2) fieldErrors.name = "Укажите, как к вам обращаться";
-
-  const phoneDigits = values.phone.replace(/\D/g, "");
-  if (values.phone && (phoneDigits.length < 10 || phoneDigits.length > 15)) {
-    fieldErrors.phone = "Проверьте номер телефона";
-  }
-  if (values.email && !EMAIL_RE.test(values.email)) fieldErrors.email = "Проверьте адрес электронной почты";
-  if (!values.phone && !values.email) fieldErrors.phone = "Укажите телефон или электронную почту для ответа";
+  // Те же правила, что и в браузере (src/lib/request-form.ts), — сервер проверяет всё повторно.
+  const fieldErrors: RequestFormState["fieldErrors"] = validateRequest(values, formData.get("consent") === "on");
 
   const serviceTitle =
     values.service === "" || values.service === "other"
       ? "Не выбрано"
       : services.find((service) => service.slug === values.service)?.title;
   if (!serviceTitle) fieldErrors.service = "Выберите направление из списка";
-
-  if (values.message.length < 10) fieldErrors.message = "Кратко опишите задачу (не менее 10 символов)";
-  if (formData.get("consent") !== "on") fieldErrors.consent = "Необходимо согласие на обработку персональных данных";
 
   if (Object.keys(fieldErrors).length > 0) {
     return { status: "error", message: "Проверьте заполнение формы.", fieldErrors, values };
@@ -96,6 +86,8 @@ export async function submitRequest(_prev: RequestFormState, formData: FormData)
     };
   }
 
+  const page = sourcePage(formData);
+  const context = describeRequestContext(page);
   let requestId: string | null = null;
   let isNew = true;
   if (databaseEnabled) {
@@ -108,7 +100,8 @@ export async function submitRequest(_prev: RequestFormState, formData: FormData)
         service: values.service === "other" ? "" : values.service,
         serviceTitle: serviceTitle as string,
         message: values.message,
-        sourcePage: sourcePage(formData),
+        sourcePage: page,
+        context,
         consentRevision: company.legalRevisionDate,
       });
       requestId = saved.id;
@@ -129,6 +122,7 @@ export async function submitRequest(_prev: RequestFormState, formData: FormData)
       `Телефон: ${values.phone || "—"}`,
       `Email: ${values.email || "—"}`,
       `Направление: ${serviceTitle}`,
+      ...(context ? [`Контекст: ${context}`] : []),
       "",
       "Описание задачи:",
       values.message,

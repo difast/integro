@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { legalDocumentList, legalIndexPath } from "@/config/legal";
 import { services } from "@/config/services";
+import { servicePages } from "@/config/service-pages";
 import { getArticles } from "@/lib/articles";
 import { getMetadataBase } from "@/lib/site";
 
@@ -19,6 +20,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [
     ...staticRoutes,
     ...services.map((service) => ({ path: `/uslugi/${service.slug}`, priority: 0.9 })),
+    ...servicePages.map((page) => ({ path: `/uslugi/${page.slug}`, priority: 0.8 })),
+    { path: "/kakoy-dokument-nuzhen", priority: 0.7 },
+    { path: "/dlya-yuristov", priority: 0.7 },
     { path: "/stati", priority: 0.7 },
   ];
   const pages: MetadataRoute.Sitemap = routes.map((route) => ({

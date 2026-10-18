@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, FileCheck2, FileText, Scale } from "lucide-react";
 import { audienceLabels, getServiceDetails } from "@/config/service-details";
 import { getService, services } from "@/config/services";
+import { getServicePage, servicePages, servicePagesFor, type BaseServiceSlug } from "@/config/service-pages";
 import { articleCategories, getArticlesForService } from "@/lib/articles";
 import { pageMetadata } from "@/lib/metadata";
 import { showDraftContent } from "@/lib/site";
@@ -13,17 +14,22 @@ import { ButtonLink } from "@/components/ui/Button";
 import { DraftBadge } from "@/components/ui/DraftBadge";
 import { SectionHead } from "@/components/ui/SectionHead";
 import { CtaBand } from "@/components/sections/CtaBand";
+import { ServicePageView } from "@/components/sections/ServicePageView";
+import { breadcrumbJsonLd, JsonLd } from "@/lib/structured-data";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export const dynamicParams = false;
 
+// Базовые направления и отдельные страницы по видам оценки и экспертизы.
 export function generateStaticParams() {
-  return services.map((service) => ({ slug: service.slug }));
+  return [...services.map((service) => ({ slug: service.slug })), ...servicePages.map((page) => ({ slug: page.slug }))];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const page = getServicePage(slug);
+  if (page) return pageMetadata({ title: page.metaTitle, description: page.metaDescription, path: `/uslugi/${slug}` });
   const service = getService(slug);
   if (!service) return {};
   return pageMetadata({ title: service.title, description: service.metaDescription, path: `/uslugi/${slug}` });
@@ -31,6 +37,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ServicePage({ params }: Props) {
   const { slug } = await params;
+  const detailedPage = getServicePage(slug);
+  if (detailedPage) return <ServicePageView page={detailedPage} />;
+
   const service = getService(slug);
   const details = getServiceDetails(slug);
   if (!service || !details) notFound();
@@ -41,6 +50,8 @@ export default async function ServicePage({ params }: Props) {
   const prepare = service.prepare.items.filter((item) => showDraftContent || !item.draft);
   const others = services.filter((item) => item.slug !== service.slug);
   const articles = getArticlesForService(slug).map((a) => ({ ...a, categoryLabel: articleCategories[a.category] }));
+  const subPages = servicePagesFor(slug as BaseServiceSlug);
+  const crumbs = [{ label: "Услуги", href: "/uslugi" }, { label: service.title }];
 
   const facts = [
     { icon: FileCheck2, title: "Основание", text: details.startsWith },
@@ -50,9 +61,10 @@ export default async function ServicePage({ params }: Props) {
 
   return (
     <>
+      <JsonLd data={breadcrumbJsonLd(crumbs, `/uslugi/${service.slug}`)} />
       <PageHeader
         title={service.title}
-        crumbs={[{ label: "Услуги", href: "/uslugi" }, { label: service.title }]}
+        crumbs={crumbs}
         lead={service.lead}
         aside={
           <ul className="space-y-3" aria-label="Ключевые сведения">
@@ -162,6 +174,32 @@ export default async function ServicePage({ params }: Props) {
           </aside>
         </div>
       </section>
+
+      {subPages.length > 0 ? (
+        <section aria-labelledby="subpages-title" className="container-page mt-20 lg:mt-24">
+          <SectionHead
+            id="subpages-title"
+            eyebrow="Подробнее"
+            title={slug === "ocenka" ? "Оценка по видам объектов" : "Подробно о частых задачах"}
+          />
+          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {subPages.map((page) => (
+              <li key={page.slug}>
+                <Link
+                  href={`/uslugi/${page.slug}`}
+                  className="group flex h-full flex-col justify-between gap-5 rounded-[var(--radius-card)] bg-white p-6 transition-colors hover:bg-white/80"
+                >
+                  <span>
+                    <span className="block text-[1.125rem] font-medium text-ink group-hover:text-bronze-deep">{page.shortTitle}</span>
+                    <span className="mt-2 block text-[0.9375rem] leading-relaxed text-muted">{page.summary}</span>
+                  </span>
+                  <ArrowRight aria-hidden="true" className="h-4 w-4 self-end text-bronze-deep" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {/* Порядок: здесь номера отражают последовательность этапов. */}
       <section id="poryadok" aria-labelledby="steps-title" className="container-page mt-20 scroll-mt-10 lg:mt-24">

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import { AlertCircle, ArrowRight, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
 import { submitRequest } from "@/app/(site)/kontakty/actions";
-import { initialRequestState, limits, type RequestFieldName } from "@/lib/request-form";
+import { initialRequestState, limits, validateRequest, type RequestFieldName } from "@/lib/request-form";
 import { company } from "@/config/company";
 import { legalDocuments } from "@/config/legal";
 import { ConsentBody } from "@/content/legal/consent";
@@ -57,6 +57,8 @@ export function RequestForm({
   const submissionKeyRef = useRef("");
   const statusRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  // Ошибки проверки в браузере: при них форма не отправляется на сервер.
+  const [clientErrors, setClientErrors] = useState<Partial<Record<RequestFieldName, string>> | null>(null);
 
   // Время открытия формы — для серверной проверки от автоматической отправки.
   // Хранится вне DOM: React сбрасывает поля формы после каждого действия.
@@ -74,6 +76,26 @@ export function RequestForm({
     formAction(formData);
   };
 
+  // Проверка до отправки. Выполняется в onSubmit, а не в action: отмена здесь не
+  // запускает действие формы, и React не очищает уже введённые значения.
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const data = new FormData(event.currentTarget);
+    const text = (key: string) => String(data.get(key) ?? "").trim();
+    const found = validateRequest(
+      { name: text("name"), phone: text("phone"), email: text("email"), message: text("message") },
+      data.get("consent") === "on",
+    );
+    if (Object.keys(found).length > 0) {
+      event.preventDefault();
+      setClientErrors(found);
+      const order: RequestFieldName[] = ["name", "phone", "email", "message", "consent"];
+      const first = order.find((name) => found[name]);
+      if (first) requestAnimationFrame(() => document.getElementById(first)?.focus());
+      return;
+    }
+    setClientErrors(null);
+  };
+
   useEffect(() => {
     if (state.status === "success") {
       formRef.current?.reset();
@@ -82,7 +104,7 @@ export function RequestForm({
     if (state.status !== "idle") statusRef.current?.focus();
   }, [state]);
 
-  const errors = state.fieldErrors ?? {};
+  const errors = clientErrors ?? state.fieldErrors ?? {};
   const values = state.status === "error" ? (state.values ?? {}) : {};
   const errorProps = (name: RequestFieldName) =>
     errors[name] ? { "aria-invalid": true as const, "aria-describedby": `${name}-error` } : {};
@@ -91,7 +113,7 @@ export function RequestForm({
   const fieldsKey = `${state.status}-${JSON.stringify(values)}`;
 
   return (
-    <form ref={formRef} action={submit} noValidate className="space-y-6" aria-describedby="form-status">
+    <form ref={formRef} action={submit} onSubmit={handleSubmit} noValidate className="space-y-6" aria-describedby="form-status">
       <div ref={statusRef} id="form-status" tabIndex={-1} aria-live="polite" className="outline-none">
         {!enabled ? (
           <div className="flex gap-3 rounded-[var(--radius-control)] border-l-[3px] border-bronze bg-mist p-4 text-[0.9375rem] leading-relaxed text-ink">
@@ -110,16 +132,16 @@ export function RequestForm({
             </div>
           </div>
         ) : null}
-        {state.status === "success" ? (
+        {state.status === "success" && !clientErrors ? (
           <div className="flex gap-3 rounded-[var(--radius-control)] border-l-[3px] border-dark bg-mist p-4 text-ink">
             <CheckCircle2 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
             <p className="font-medium">{state.message}</p>
           </div>
         ) : null}
-        {state.status === "error" && state.message ? (
+        {clientErrors || (state.status === "error" && state.message) ? (
           <div role="alert" className="flex gap-3 rounded-[var(--radius-control)] border-l-[3px] border-danger bg-mist p-4 text-ink">
             <AlertCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
-            <p className="font-medium">{state.message}</p>
+            <p className="font-medium">{clientErrors ? "Проверьте заполнение формы." : state.message}</p>
           </div>
         ) : null}
       </div>

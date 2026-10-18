@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import { clientLinks } from "@/config/content";
+import { servicePages } from "@/config/service-pages";
 import { audienceLabels, getServiceDetails, type AudienceKey } from "@/config/service-details";
 import { services } from "@/config/services";
 import { pageMetadata } from "@/lib/metadata";
@@ -57,12 +58,31 @@ export default function ServicesPage() {
               ))}
             </ul>
           </nav>
+          <nav aria-labelledby="kinds-title">
+            <h2 id="kinds-title" className="text-[0.875rem] font-medium text-muted">
+              Частые задачи
+            </h2>
+            <ul className="mt-4 space-y-3 border-t border-line pt-4 text-[0.9375rem]">
+              {servicePages.map((page) => (
+                <li key={page.slug}>
+                  <Link href={`/uslugi/${page.slug}`} className="text-link">
+                    {page.shortTitle}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
           <nav aria-labelledby="clients-title">
             <h2 id="clients-title" className="text-[0.875rem] font-medium text-muted">
               Клиентам
             </h2>
             <ul className="mt-4 space-y-3 border-t border-line pt-4 text-[0.9375rem]">
-              {[...clientLinks, { label: "Статьи", href: "/stati" }].map((link) => (
+              {[
+                { label: "Какой документ мне нужен?", href: "/kakoy-dokument-nuzhen" },
+                ...clientLinks,
+                { label: "Для юристов", href: "/dlya-yuristov" },
+                { label: "Статьи", href: "/stati" },
+              ].map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="text-link">
                     {link.label}

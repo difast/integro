@@ -33,6 +33,10 @@ Node.js: 20.9 или новее (рекомендуется 22, см. `.nvmrc`).
 | Навигация, порядок работы, принципы, FAQ, оплата | `src/config/content.ts` |
 | Специалисты (раздел выводится, если список не пуст) | `src/config/team.ts` |
 | Подробное содержание страниц услуг (ситуации, состав работ, этапы, FAQ) | `src/config/service-details.ts` |
+| Отдельные страницы по видам оценки и экспертизы (квартира, бизнес, залив, автомобиль, строительно-техническая) | `src/config/service-pages.ts` |
+| Правила помощника «Какой документ мне нужен?» | `src/lib/document-helper.ts` |
+| Страница «Для юристов»: примеры вопросов | `src/config/lawyers.ts` |
+| Шаблон ходатайства и нормы по ГПК, АПК, КАС | `src/lib/petition.ts` |
 | Статьи | `content/articles/*.md` |
 | Панель заявок, база, сессии | `src/app/admin/`, `src/lib/requests/`, `src/lib/admin/`, `src/lib/db/` |
 | Цвета (токены палитры), радиусы, типографика, общие стили | `src/app/globals.css` (блок `@theme`) |
@@ -68,6 +72,10 @@ Node.js: 20.9 или новее (рекомендуется 22, см. `.nvmrc`).
 - `/` — главная
 - `/uslugi`, `/uslugi/ocenka`, `/uslugi/sudebnaya-ekspertiza`, `/uslugi/ekspertnye-issledovaniya`
 - `/o-kompanii`, `/poryadok-raboty`, `/kontakty` (форма заявки, якорь `#zayavka`)
+- `/uslugi/ocenka-kvartiry`, `/uslugi/ocenka-biznesa`, `/uslugi/ocenka-ushcherba-ot-zaliva`, `/uslugi/ocenka-avtomobilya`,
+  `/uslugi/stroitelno-tehnicheskaya-ekspertiza` — отдельные страницы по видам работ (тот же маршрут `/uslugi/[slug]`)
+- `/kakoy-dokument-nuzhen` — помощник «Какой документ мне нужен?»
+- `/dlya-yuristov` — вопросы эксперту, шаблон ходатайства, нормативная база
 - `/stati` и `/stati/<slug>` — статьи
 - `/pravovaya-informaciya` — правовая информация:
   - `/pravovaya-informaciya/svedeniya-ob-organizacii`

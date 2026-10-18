@@ -25,7 +25,7 @@ const quickActions = [
   { title: "Заказать оценку", note: "Отчёт об оценке", href: "/kontakty?usluga=ocenka#zayavka" },
   { title: "Судебная экспертиза", note: "По определению суда", href: "/uslugi/sudebnaya-ekspertiza" },
   { title: "Экспертные исследования", note: "Заключение специалиста", href: "/uslugi/ekspertnye-issledovaniya" },
-  { title: "Порядок работы", note: "От заявки до результата", href: "/poryadok-raboty" },
+  { title: "Какой документ нужен?", note: "Помощник: четыре вопроса", href: "/kakoy-dokument-nuzhen" },
 ];
 
 export default function HomePage() {

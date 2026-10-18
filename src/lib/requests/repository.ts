@@ -16,6 +16,7 @@ export type RequestRecord = {
   status: RequestStatus;
   notes: string;
   sourcePage: string | null;
+  context: string | null;
   consentRevision: string;
 };
 
@@ -34,11 +35,12 @@ type Row = {
   status: RequestStatus;
   notes: string;
   source_page: string | null;
+  context: string | null;
   consent_revision: string;
 };
 
 const FULL_COLUMNS =
-  "id, created_at, updated_at, name, phone, email, service, service_title, message, status, notes, source_page, consent_revision";
+  "id, created_at, updated_at, name, phone, email, service, service_title, message, status, notes, source_page, context, consent_revision";
 
 function toRecord(row: Row): RequestRecord {
   return {
@@ -54,6 +56,7 @@ function toRecord(row: Row): RequestRecord {
     status: row.status,
     notes: row.notes,
     sourcePage: row.source_page,
+    context: row.context,
     consentRevision: row.consent_revision,
   };
 }
@@ -73,6 +76,7 @@ export type NewRequest = {
   serviceTitle: string;
   message: string;
   sourcePage: string | null;
+  context: string | null;
   consentRevision: string;
 };
 
@@ -82,8 +86,8 @@ export type NewRequest = {
  */
 export async function createRequest(input: NewRequest): Promise<{ id: string; created: boolean }> {
   const inserted = await query<{ id: string }>(
-    `INSERT INTO requests (submission_key, name, phone, phone_digits, email, service, service_title, message, source_page, consent_revision)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `INSERT INTO requests (submission_key, name, phone, phone_digits, email, service, service_title, message, source_page, consent_revision, context)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      ON CONFLICT (submission_key) DO NOTHING
      RETURNING id`,
     [
@@ -97,6 +101,7 @@ export async function createRequest(input: NewRequest): Promise<{ id: string; cr
       input.message,
       input.sourcePage,
       input.consentRevision,
+      input.context,
     ],
   );
   if (inserted[0]) return { id: inserted[0].id, created: true };
