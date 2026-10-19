@@ -102,10 +102,10 @@ describe("recommend — ключевые сценарии", () => {
     expect(recommend({ ...base, purpose: "technical", object: "business" }).kind).toBe("consult");
   });
 
-  it("ущерб автомобилю → отчёт с оговоркой об ОСАГО", () => {
+  it("ущерб автомобилю → отчёт об оценке автомобиля", () => {
     const r = recommend({ ...base, purpose: "damage", object: "car" });
     expect(r.kind).toBe("report");
-    expect(r.notes.join(" ")).toMatch(/ОСАГО/);
+    expect(r.service?.href).toBe("/uslugi/ocenka-avtomobilya");
   });
 });
 

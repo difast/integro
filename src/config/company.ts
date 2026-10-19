@@ -37,16 +37,19 @@ export type Contacts = {
   /** Часы связи, например "Ежедневно с 10:00 до 20:00 по московскому времени" */
   workingHours: string | null;
   /**
-   * Мессенджеры — полные ссылки. Пока значение null, кнопка на сайте не показывается.
-   * Примеры: WhatsApp — "https://wa.me/79363133202", Telegram — "https://t.me/имя_аккаунта",
-   * MAX — ссылка на профиль или чат из приложения MAX. Перед включением WhatsApp и Telegram
-   * см. LEGAL_REVIEW.md (раздел 4.8): это зарубежные сервисы.
+   * Мессенджеры. Кнопка показывается, если задана ссылка (href) или номер (phone).
+   * Если есть только номер — по кнопке открывается подсказка «найдите нас по номеру».
+   * Примеры ссылок: WhatsApp — "https://wa.me/79363133202", Telegram — "https://t.me/имя_аккаунта",
+   * MAX — ссылка на профиль вида "https://max.ru/u/…" (копируется в приложении MAX).
+   * WhatsApp и Telegram — зарубежные сервисы, см. LEGAL_REVIEW.md (раздел 4.8).
    */
-  messengers: {
-    whatsapp: string | null;
-    telegram: string | null;
-    max: string | null;
-  };
+  messengers: Record<"whatsapp" | "telegram" | "max", MessengerConfig>;
+};
+
+export type MessengerConfig = {
+  href: string | null;
+  /** Номер для поиска в мессенджере, если прямой ссылки нет */
+  phone?: string | null;
 };
 
 export type SocialLink = {
@@ -93,9 +96,12 @@ export const company: Company = {
     officeAddress: null,
     workingHours: "Ежедневно с 10:00 до 20:00 по московскому времени",
     messengers: {
-      whatsapp: null,
-      telegram: null,
-      max: null,
+      whatsapp: { href: "https://wa.me/79363133202" },
+      // ЗАГЛУШКА: заменить на ссылку аккаунта компании, например "https://t.me/имя_аккаунта".
+      telegram: { href: "https://t.me/" },
+      // Прямой ссылки на чат по номеру у MAX нет — показывается номер для поиска.
+      // Когда появится ссылка на профиль из приложения ("https://max.ru/u/…"), укажите её в href.
+      max: { href: null, phone: "+7 (936) 936-91-89" },
     },
   },
   requisites: {
