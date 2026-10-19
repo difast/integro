@@ -136,7 +136,7 @@ export function MobileMenu({ items, audiences, phone, email, workingHours, messe
               Оставить заявку
             </RequestTrigger>
             {phone ? (
-              <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="block text-lg font-medium text-ink">
+              <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} className="block text-xl font-bold text-ink">
                 {phone}
               </a>
             ) : null}

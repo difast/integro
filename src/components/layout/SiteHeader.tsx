@@ -25,7 +25,7 @@ export function SiteHeader() {
         <Logo />
         <div className="flex items-center gap-5">
           {phone ? (
-            <a href={phoneHref(phone)} className="hidden text-[0.9375rem] font-medium whitespace-nowrap text-ink lg:inline">
+            <a href={phoneHref(phone)} className="hidden text-[1.1875rem] font-bold tracking-tight whitespace-nowrap text-ink hover:text-bronze-deep lg:inline">
               {phone}
             </a>
           ) : null}
