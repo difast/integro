@@ -29,7 +29,7 @@ export function SiteHeader() {
               {phone}
             </a>
           ) : null}
-          <MessengerLinks variant="compact" className="hidden lg:flex" />
+          <MessengerLinks variant="compact" placement="header" className="hidden lg:flex" />
           {email ? (
             <a href={`mailto:${email}`} className="hidden text-[0.9375rem] whitespace-nowrap text-ink hover:text-bronze-deep lg:inline">
               {email}

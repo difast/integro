@@ -60,4 +60,18 @@ export const migrations: Migration[] = [
       ALTER TABLE requests ADD COLUMN context text CHECK (char_length(context) <= 300);
     `,
   },
+  {
+    // Переходы по кнопкам мессенджеров. Без персональных данных: ни IP, ни cookie, ни User-Agent.
+    id: "003_messenger_clicks",
+    sql: `
+      CREATE TABLE messenger_clicks (
+        id          bigserial PRIMARY KEY,
+        created_at  timestamptz NOT NULL DEFAULT now(),
+        messenger   text NOT NULL CHECK (messenger IN ('whatsapp', 'telegram', 'max')),
+        placement   text NOT NULL CHECK (placement IN ('header', 'mobile_menu', 'footer', 'contacts')),
+        page_path   text NOT NULL CHECK (char_length(page_path) BETWEEN 1 AND 200)
+      );
+      CREATE INDEX messenger_clicks_created_at_idx ON messenger_clicks (created_at);
+    `,
+  },
 ];

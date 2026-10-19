@@ -1,7 +1,9 @@
 import { MessageSquare } from "lucide-react";
 import { company } from "@/config/company";
+import type { ClickPlacement, MessengerKey } from "@/lib/stats/clicks";
+import { TrackedMessengerLink } from "./TrackedMessengerLink";
 
-export type MessengerItem = { key: "whatsapp" | "telegram" | "max"; label: string; href: string };
+export type MessengerItem = { key: MessengerKey; label: string; href: string };
 
 const meta: { key: MessengerItem["key"]; label: string }[] = [
   { key: "whatsapp", label: "WhatsApp" },
@@ -68,10 +70,13 @@ const styles = {
  */
 export function MessengerLinks({
   variant = "light",
+  placement,
   items = getMessengers(),
   className = "",
 }: {
   variant?: keyof typeof styles;
+  /** Где стоят кнопки — для статистики переходов в админке. */
+  placement: ClickPlacement;
   items?: MessengerItem[];
   className?: string;
 }) {
@@ -90,16 +95,15 @@ export function MessengerLinks({
         );
         return (
           <li key={item.key}>
-            <a
+            <TrackedMessengerLink
+              messenger={item.key}
+              placement={placement}
               href={item.href}
-              target="_blank"
-              rel="noopener noreferrer"
               className={styles[variant]}
-              aria-label={compact ? `Написать в ${item.label}` : undefined}
-              title={compact ? item.label : undefined}
+              label={compact ? item.label : undefined}
             >
               {content}
-            </a>
+            </TrackedMessengerLink>
           </li>
         );
       })}

@@ -145,7 +145,7 @@ export function MobileMenu({ items, audiences, phone, email, workingHours, messe
                 {email}
               </a>
             ) : null}
-            <MessengerLinks items={messengers} />
+            <MessengerLinks placement="mobile_menu" items={messengers} />
             {workingHours ? <p className="text-[0.875rem] text-muted">{workingHours}</p> : null}
           </div>
         </nav>

@@ -185,3 +185,65 @@ test("CSV доступен после входа, кириллица и форм
   expect(filtered).toContain("Ольга Ёлкина");
   expect(filtered).not.toContain("HYPERLINK");
 });
+
+test("переходы в мессенджеры учитываются и видны в статистике", async ({ browser, request, baseURL }) => {
+  await db.query("TRUNCATE messenger_clicks");
+  // Обычный браузер: переходы из headless-браузеров отсекаются как роботы.
+  const context = await browser.newContext({
+    baseURL,
+    viewport: { width: 1280, height: 900 },
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+  });
+  await context.addInitScript(() => localStorage.setItem("integro-cookie-notice", "accepted-v1"));
+  await context.route(/^https:\/\/(wa\.me|t\.me)\//, (route) => route.fulfill({ body: "ok" }));
+  const page = await context.newPage();
+
+  await page.goto("/kontakty");
+  for (const link of [
+    page.locator("footer").getByRole("link", { name: "WhatsApp" }),
+    page.locator("header").getByRole("link", { name: "Написать в Telegram" }),
+  ]) {
+    const popup = context.waitForEvent("page");
+    await link.click();
+    await (await popup).close();
+  }
+
+  await expect
+    .poll(async () => (await db.query("SELECT messenger, placement, page_path FROM messenger_clicks ORDER BY id")).rows)
+    .toEqual([
+      { messenger: "whatsapp", placement: "footer", page_path: "/kontakty" },
+      { messenger: "telegram", placement: "header", page_path: "/kontakty" },
+    ]);
+
+  // Роботы, чужие сайты и неверные данные не учитываются.
+  const event = { messenger: "whatsapp", placement: "footer", path: "/" };
+  const browserUa = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0 Safari/537.36";
+  for (const headers of <Record<string, string>[]>[
+    { origin: "http://localhost:3201", "user-agent": "Mozilla/5.0 (compatible; YandexBot/3.0)" },
+    { origin: "https://evil.example", "user-agent": browserUa },
+    { "user-agent": browserUa },
+  ]) {
+    const response = await request.post("/api/clicks", { data: event, headers });
+    expect(response.status()).toBe(204);
+  }
+  await request.post("/api/clicks", {
+    data: { ...event, messenger: "viber" },
+    headers: { origin: "http://localhost:3201", "user-agent": browserUa },
+  });
+  expect((await db.query("SELECT count(*)::int AS n FROM messenger_clicks")).rows[0].n).toBe(2);
+
+  // Без входа статистика недоступна.
+  await page.goto("/admin/statistika");
+  await expect(page).toHaveURL(/\/admin\/vhod$/);
+
+  await login(page);
+  await page.getByRole("link", { name: "Статистика" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Переходы в мессенджеры");
+  await expect(page.getByTestId("clicks-total")).toHaveText("2");
+  await expect(page.getByTestId("clicks-whatsapp")).toHaveText("1");
+  await expect(page.getByTestId("clicks-telegram")).toHaveText("1");
+  await expect(page.getByRole("row", { name: /Подвал сайта/ })).toContainText("1");
+  await expect(page.getByRole("link", { name: "/kontakty" })).toBeVisible();
+
+  await context.close();
+});

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { LogOut } from "lucide-react";
+import { AdminNav } from "@/components/admin/AdminNav";
 import { LogoMark } from "@/components/ui/Logo";
 import { isAdmin } from "@/lib/admin/auth";
 import { logout } from "./actions";
@@ -41,6 +42,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           ) : null}
         </div>
       </header>
+      {signedIn ? <AdminNav /> : null}
       <main id="main" className="flex-1 pb-16">
         {children}
       </main>

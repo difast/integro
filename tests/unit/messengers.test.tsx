@@ -11,12 +11,12 @@ describe("контакты", () => {
     expect(items.map((i) => i.key)).toEqual(["whatsapp", "telegram"]);
     expect(items[0]!.href).toBe("https://wa.me/79363133202");
     expect(items[1]!.href).toBe("https://t.me/+79363133202");
-    expect(renderToStaticMarkup(<MessengerLinks items={[]} />)).toBe("");
+    expect(renderToStaticMarkup(<MessengerLinks placement="footer" items={[]} />)).toBe("");
   });
 
   it("кнопка появляется, как только задана ссылка", () => {
     const html = renderToStaticMarkup(
-      <MessengerLinks
+      <MessengerLinks placement="footer"
         items={[
           { key: "telegram", label: "Telegram", href: "https://t.me/example" },
           { key: "max", label: "MAX", href: "https://max.ru/example" },
@@ -32,7 +32,7 @@ describe("контакты", () => {
 
   it("в компактном варианте у значков есть подписи для экранных дикторов", () => {
     const html = renderToStaticMarkup(
-      <MessengerLinks variant="compact" items={[{ key: "whatsapp", label: "WhatsApp", href: "https://wa.me/79363133202" }]} />,
+      <MessengerLinks placement="footer" variant="compact" items={[{ key: "whatsapp", label: "WhatsApp", href: "https://wa.me/79363133202" }]} />,
     );
     expect(html).toContain('aria-label="Написать в WhatsApp"');
   });
