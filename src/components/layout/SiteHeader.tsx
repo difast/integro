@@ -1,15 +1,16 @@
-import Link from "next/link";
 import { company } from "@/config/company";
 import { mainNav } from "@/config/content";
 import { audienceLabels, type AudienceKey } from "@/config/service-details";
 import { phoneHref } from "@/lib/site";
 import { RequestButton } from "@/components/request/RequestButton";
+import { getMessengers, MessengerLinks } from "@/components/ui/MessengerLinks";
 import { Logo } from "@/components/ui/Logo";
 import { DesktopNav, MobileMenu } from "./HeaderNav";
 
 /**
- * Шапка в две строки (по референсу): сверху — логотип, разделы по типу
- * заказчика и действие; снизу — основная навигация по сайту.
+ * Шапка в две строки (по референсу): сверху — логотип, телефон, почта и действие;
+ * снизу — основная навигация по сайту. Разделы по типу заказчика — в мобильном меню,
+ * на главной и в каталоге услуг.
  */
 export function SiteHeader() {
   const { phone, email, workingHours } = company.contacts;
@@ -21,37 +22,32 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white lg:static">
       <div className="container-page flex h-16 items-center justify-between gap-6 lg:h-[76px]">
-        <div className="flex items-center gap-10">
-          <Logo />
-          <nav aria-label="Для кого" className="hidden xl:block">
-            <ul className="flex gap-6 text-[0.875rem] text-muted">
-              {audiences.map((a) => (
-                <li key={a.href}>
-                  <Link href={a.href} className="transition-colors hover:text-ink">
-                    {a.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </div>
+        <Logo />
         <div className="flex items-center gap-5">
           {phone ? (
-            <a href={phoneHref(phone)} className="hidden text-[0.9375rem] font-medium text-ink lg:inline">
+            <a href={phoneHref(phone)} className="hidden text-[0.9375rem] font-medium whitespace-nowrap text-ink lg:inline">
               {phone}
             </a>
           ) : null}
+          <MessengerLinks variant="compact" className="hidden lg:flex" />
           {email ? (
-            <a href={`mailto:${email}`} className="hidden text-[0.9375rem] text-ink hover:text-bronze-deep lg:inline">
+            <a href={`mailto:${email}`} className="hidden text-[0.9375rem] whitespace-nowrap text-ink hover:text-bronze-deep lg:inline">
               {email}
             </a>
           ) : null}
           <div className="hidden sm:block">
-            <RequestButton className="min-h-11 px-5 text-[0.875rem]">
+            <RequestButton className="min-h-11 px-5 text-[0.875rem] whitespace-nowrap">
               Оставить заявку
             </RequestButton>
           </div>
-          <MobileMenu items={mainNav} audiences={audiences} phone={phone} email={email} workingHours={workingHours} />
+          <MobileMenu
+            items={mainNav}
+            audiences={audiences}
+            phone={phone}
+            email={email}
+            workingHours={workingHours}
+            messengers={getMessengers()}
+          />
         </div>
       </div>
       <div className="hidden border-t border-line lg:block">

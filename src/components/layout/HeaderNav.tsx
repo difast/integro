@@ -6,6 +6,7 @@ import { useEffect, useId, useState } from "react";
 import { Menu, X } from "lucide-react";
 import type { NavItem } from "@/config/content";
 import { RequestTrigger } from "@/components/request/RequestModal";
+import { MessengerLinks, type MessengerItem } from "@/components/ui/MessengerLinks";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -44,9 +45,10 @@ type MobileMenuProps = {
   phone: string | null;
   email: string | null;
   workingHours: string | null;
+  messengers: MessengerItem[];
 };
 
-export function MobileMenu({ items, audiences, phone, email, workingHours }: MobileMenuProps) {
+export function MobileMenu({ items, audiences, phone, email, workingHours, messengers }: MobileMenuProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const panelId = useId();
@@ -143,6 +145,7 @@ export function MobileMenu({ items, audiences, phone, email, workingHours }: Mob
                 {email}
               </a>
             ) : null}
+            <MessengerLinks items={messengers} />
             {workingHours ? <p className="text-[0.875rem] text-muted">{workingHours}</p> : null}
           </div>
         </nav>

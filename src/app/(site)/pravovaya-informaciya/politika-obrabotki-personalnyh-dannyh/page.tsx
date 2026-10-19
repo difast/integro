@@ -39,7 +39,7 @@ function PurposeBlock({
 export default function PrivacyPolicyPage() {
   const siteUrl = getSiteUrl();
   const { ogrn, inn, kpp, legalAddress } = company.requisites;
-  const { email } = company.contacts;
+  const { email, phone } = company.contacts;
   const siteName = siteUrl ? `сайт ${siteUrl.replace(/^https?:\/\//, "")}` : "сайт, на котором размещена настоящая Политика";
 
   const sections: LegalSectionData[] = [
@@ -90,6 +90,7 @@ export default function PrivacyPolicyPage() {
               ...(inn ? [{ label: "ИНН", value: inn }] : []),
               ...(kpp ? [{ label: "КПП", value: kpp }] : []),
               ...(legalAddress ? [{ label: "Адрес", value: legalAddress }] : []),
+              ...(phone ? [{ label: "Телефон", value: phone }] : []),
               ...(email ? [{ label: "Электронная почта", value: email }] : []),
             ]}
           />

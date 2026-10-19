@@ -36,6 +36,17 @@ export type Contacts = {
   officeAddress: string | null;
   /** Часы связи, например "Ежедневно с 10:00 до 20:00 по московскому времени" */
   workingHours: string | null;
+  /**
+   * Мессенджеры — полные ссылки. Пока значение null, кнопка на сайте не показывается.
+   * Примеры: WhatsApp — "https://wa.me/79363133202", Telegram — "https://t.me/имя_аккаунта",
+   * MAX — ссылка на профиль или чат из приложения MAX. Перед включением WhatsApp и Telegram
+   * см. LEGAL_REVIEW.md (раздел 4.8): это зарубежные сервисы.
+   */
+  messengers: {
+    whatsapp: string | null;
+    telegram: string | null;
+    max: string | null;
+  };
 };
 
 export type SocialLink = {
@@ -77,10 +88,15 @@ export const company: Company = {
   tagline: "Оценка и судебная экспертиза",
   siteUrl: "https://intsoftholding.ru",
   contacts: {
-    phone: null,
+    phone: "+7 (936) 313-32-02",
     email: "info@intsoftholding.ru",
     officeAddress: null,
     workingHours: "Ежедневно с 10:00 до 20:00 по московскому времени",
+    messengers: {
+      whatsapp: null,
+      telegram: null,
+      max: null,
+    },
   },
   requisites: {
     inn: "9734021152",
@@ -95,5 +111,5 @@ export const company: Company = {
   },
   social: [],
   copyrightSince: null,
-  legalRevisionDate: "18.10.2026",
+  legalRevisionDate: "19.10.2026",
 };

@@ -28,6 +28,7 @@ export function organizationDetails(): DetailRow[] {
     { label: "Сокращённое наименование", value: company.legalName },
     ...filledRequisites(),
   ];
+  if (company.contacts.phone) rows.push({ label: "Телефон", value: company.contacts.phone });
   if (company.contacts.workingHours) rows.push({ label: "Часы связи", value: company.contacts.workingHours });
   return rows;
 }

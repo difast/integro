@@ -5,6 +5,7 @@ import { legalDocumentList } from "@/config/legal";
 import { services } from "@/config/services";
 import { requisitesLine } from "@/lib/organization";
 import { copyrightYears, phoneHref } from "@/lib/site";
+import { MessengerLinks } from "@/components/ui/MessengerLinks";
 import { Logo } from "@/components/ui/Logo";
 
 type FooterLink = { label: string; href: string };
@@ -53,6 +54,7 @@ export function SiteFooter() {
               </p>
             ) : null}
             {workingHours ? <p>{workingHours}</p> : null}
+            <MessengerLinks variant="dark" className="pt-3" />
           </div>
         </div>
         <div className="lg:col-span-2">
