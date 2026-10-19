@@ -203,7 +203,7 @@ export function recommend(answers: Required<Answers>): Recommendation {
   }
 
   // 3. Неочевидные сочетания объекта и задачи.
-  if (purpose === "technical" && (object === "business" || object === "car" || object === "other")) {
+  if (purpose === "technical" && (object === "business" || object === "other")) {
     return consult(
       object === "business"
         ? "Технические вопросы о бизнесе или доле обычно не ставятся — вероятно, задачу нужно уточнить."
