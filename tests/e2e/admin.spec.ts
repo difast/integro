@@ -237,7 +237,7 @@ test("переходы в мессенджеры учитываются и ви�
   await expect(page).toHaveURL(/\/admin\/vhod$/);
 
   await login(page);
-  await page.getByRole("link", { name: "Статистика" }).click();
+  await page.getByRole("link", { name: "Переходы" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Переходы в мессенджеры");
   await expect(page.getByTestId("clicks-total")).toHaveText("2");
   await expect(page.getByTestId("clicks-whatsapp")).toHaveText("1");

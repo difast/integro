@@ -56,7 +56,7 @@ describe("журнал ошибок без секретов", () => {
 describe("тексты push и Telegram без персональных данных", () => {
   it("не зависят от данных клиента и не содержат их", () => {
     for (const type of notificationTypes) {
-      const text = externalText(type, "telegram");
+      const text = externalText(type.value, "telegram");
       expect(text.title.length).toBeGreaterThan(0);
       expect(`${text.title} ${text.body}`).not.toMatch(/\+7|\d{10}|@/);
     }
@@ -72,7 +72,7 @@ describe("резервные копии", () => {
     expect(decryptBackup(file, key).toString()).toBe("строки базы");
     expect(() => decryptBackup(file, randomBytes(32))).toThrow(/неверный ключ/);
     const broken = Buffer.from(file);
-    broken[broken.length - 20] ^= 1;
+    broken[broken.length - 20]! ^= 1;
     expect(() => decryptBackup(broken, key)).toThrow();
     expect(() => decryptBackup(Buffer.from("not a backup file at all, definitely"), key)).toThrow(/не файл/);
   });

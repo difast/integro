@@ -137,7 +137,18 @@ Open Graph и разметка Article.
 - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_BOT_USERNAME` — Telegram-бот
   (см. [TELEGRAM_INTEGRATION.md](TELEGRAM_INTEGRATION.md)); в журнале — строка `[telegram] bot off/on`.
 
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — браузерные push-уведомления администратору.
+- `BACKUP_ENCRYPTION_KEY`, `BACKUP_S3_*`, `BACKUP_HOUR_MSK`, `BACKUP_RETENTION_DAYS` — шифрованные резервные копии
+  базы во внешнем хранилище (см. [ADMIN_OPERATIONS.md](ADMIN_OPERATIONS.md)).
+
 Секреты задаются только в панели хостинга, в репозиторий не попадают (`.env*` в `.gitignore`).
+
+## CRM: уведомления, копии, мониторинг, аналитика
+
+Разделы админки: «Заявки» (воронка, сделка, оплата, история изменений, ручная регистрация заявок из WhatsApp,
+Авито, телефона, почты), «Аналитика» (`/admin/analitika`), «Уведомления» (центр, push, Telegram),
+«Система» (интеграции, ошибки, повторы, резервные копии, сроки хранения). Настройка, восстановление из копии,
+формулы показателей и результаты аудита безопасности — [ADMIN_OPERATIONS.md](ADMIN_OPERATIONS.md).
 
 ## Чат-боты MAX и Telegram
 

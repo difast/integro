@@ -2,7 +2,7 @@
  * Резервные копии базы сайта из командной строки (см. ADMIN_OPERATIONS.md).
  *
  *   npm run db:backup -- --out backup.bak                       копия текущей базы (DATABASE_URL) в файл
- *   npm run db:backup -- list                                   копии в хранилище S3
+ *   npm run db:backups                                          копии в хранилище S3
  *   npm run db:restore -- --file backup.bak --target <URL>      восстановление из файла в базу <URL>
  *   npm run db:restore -- --s3-key <ключ> --target <URL>        восстановление из хранилища S3
  *

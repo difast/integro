@@ -34,13 +34,15 @@ export function NotificationBell() {
   }, []);
 
   useEffect(() => {
-    void load();
+    // Первая загрузка — сразу после монтирования (асинхронно, вне тела эффекта).
+    const first = setTimeout(() => void load(), 0);
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") void load();
     }, INTERVAL_MS);
     const onVisible = () => document.visibilityState === "visible" && void load();
     document.addEventListener("visibilitychange", onVisible);
     return () => {
+      clearTimeout(first);
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
