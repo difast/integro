@@ -27,4 +27,17 @@ export async function register() {
   } catch (error) {
     console.error("[db] database is unavailable:", describeDbError(error));
   }
+
+  // Чат-бот MAX: состояние настройки (без токена и секрета) и фоновая досылка раз в минуту.
+  const { getMaxConfig, isMaxEnabled, maxProblemText } = await import("@/lib/max/config");
+  const max = getMaxConfig();
+  if (!isMaxEnabled(max)) {
+    const reasons = max.problems.filter((p) => p !== "webhook_url_missing" && p !== "webhook_url_invalid");
+    console.info(`[max] chat bot off: ${reasons.map((p) => maxProblemText[p]).join(" ")}`);
+    return;
+  }
+  console.info(`[max] chat bot on, webhook ${max.webhookUrl ?? "(MAX_WEBHOOK_URL is not set)"}`);
+  const { sweepMax } = await import("@/lib/max/processor");
+  const timer = setInterval(() => void sweepMax(), 60_000);
+  timer.unref?.();
 }

@@ -30,6 +30,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 // Допустимые символы номера: цифры, пробелы, «+», скобки, дефис и точка.
 const PHONE_CHARS_RE = /^\+?[\d\s().-]+$/;
 
+/** Номер телефона: допустимые символы и 10–15 цифр (те же правила для сайта и чат-бота). */
+export function isValidPhone(phone: string): boolean {
+  const digits = phone.replace(/\D/g, "");
+  return PHONE_CHARS_RE.test(phone) && digits.length >= 10 && digits.length <= 15;
+}
+
 /**
  * Проверка полей формы — одна и та же в браузере (до отправки) и на сервере.
  * Значения должны быть уже обрезаны по краям. Направление проверяется только на сервере.
@@ -42,12 +48,7 @@ export function validateRequest(
   if (values.name.length < 2) errors.name = "Укажите, как к вам обращаться";
   else if (values.name.length > limits.name) errors.name = `Не более ${limits.name} символов`;
 
-  if (values.phone) {
-    const digits = values.phone.replace(/\D/g, "");
-    if (!PHONE_CHARS_RE.test(values.phone) || digits.length < 10 || digits.length > 15) {
-      errors.phone = "Проверьте номер телефона";
-    }
-  }
+  if (values.phone && !isValidPhone(values.phone)) errors.phone = "Проверьте номер телефона";
   if (values.email && (!EMAIL_RE.test(values.email) || values.email.length > limits.email)) {
     errors.email = "Проверьте адрес электронной почты";
   }

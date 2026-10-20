@@ -8,7 +8,7 @@ import { buttonClass } from "@/components/ui/Button";
 
 const initial: ActionState = { status: "idle" };
 
-function Message({ state }: { state: ActionState }) {
+export function ActionMessage({ state }: { state: ActionState }) {
   if (state.status === "idle" || !state.message) return null;
   const ok = state.status === "success";
   return (
@@ -66,7 +66,7 @@ export function RequestEditor({ id, status, notes }: { id: string; status: Reque
           className="mt-2 block w-full resize-y rounded-[var(--radius-control)] border border-line-strong bg-white px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-dark focus:outline-none"
         />
       </div>
-      <Message state={saveState} />
+      <ActionMessage state={saveState} />
       <button type="submit" disabled={saving} className={buttonClass("primary", "min-h-11 px-5")}>
         {saving ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
         Сохранить
@@ -97,7 +97,7 @@ export function DeleteRequest({ id }: { id: string }) {
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="confirm" value="yes" />
       <p className="text-[0.9375rem] font-medium text-ink">Удалить заявку без возможности восстановления?</p>
-      <Message state={state} />
+      <ActionMessage state={state} />
       <div className="flex flex-wrap gap-2">
         <button
           type="submit"

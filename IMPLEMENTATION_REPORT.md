@@ -272,3 +272,16 @@ DNS). Поэтому положения сверены по поисковым �
 - Нажатие не означает, что посетитель написал сообщение: мессенджер открывается вне сайта.
 - Файлы: `src/lib/stats/clicks.ts`, `src/lib/stats/repository.ts`, `src/app/api/clicks/route.ts`, `src/components/ui/TrackedMessengerLink.tsx`, `src/components/admin/AdminNav.tsx`, `src/app/admin/statistika/page.tsx`.
 - Тесты: `tests/unit/clicks.test.ts`, `tests/integration/clicks-db.test.ts`, сценарий в `tests/e2e/admin.spec.ts` (нажатие → запись → отображение в админке; робот, чужой сайт и неверные данные не учитываются; без входа раздел недоступен).
+
+## 12. Дополнение 20.10.2026: чат-бот MAX
+
+Подробно — `MAX_INTEGRATION.md`; правовые вопросы — `LEGAL_REVIEW.md`, п. 4.10.
+
+- Webhook `POST /api/max/webhook` (секрет `X-Max-Bot-Api-Secret`, защита от повторной доставки, ответ MAX сразу после записи в базу).
+- Сценарий: приветствие и меню из пяти пунктов, разделы услуг (тексты — со страниц услуг), вопросы о документах и цене, оформление заявки с согласием, проверкой и исправлением, передача специалисту. Тексты — `src/config/max-bot.ts`.
+- Заявки из бота — в существующую таблицу `requests` (`channel = 'max'`), видны в «Заявках» с пометкой MAX, уведомление на почту — как для формы.
+- Админка «MAX — обращения»: список с поиском и фильтрами, карточка с перепиской, ответ оператора через MAX API, повтор при ошибке, режимы «бот / оператор», «нужен ответ», закрытие, заметки, связанные заявки, удаление; «Настройки MAX» — проверка токена и регистрация Webhook.
+- Миграция `004_max_bot`: `max_clients`, `max_messages`, `max_notes`, `max_events`, поля `requests.channel`, `requests.max_client_id`.
+- Переменные: `MAX_BOT_TOKEN`, `MAX_WEBHOOK_SECRET`, `MAX_WEBHOOK_URL` (необязательно), `MAX_API_CA_CERT` (необязательно).
+- Тесты: `tests/unit/max-scenario.test.ts`, `tests/unit/max-api.test.ts`, `tests/integration/max-db.test.ts`, `tests/e2e/max.spec.ts` с имитацией MAX API (`tests/e2e/max-mock-server.mjs`).
+- Не проверено на реальном MAX API (нет токена и доступа к доменам MAX из среды разработки) — порядок проверки в `MAX_INTEGRATION.md`, раздел 4.

@@ -180,7 +180,12 @@ export default async function AdminRequestsPage({ searchParams }: Props) {
                 {list.items.map((item) => (
                   <tr key={item.id} className="border-b border-line last:border-0 hover:bg-mist/50">
                     <td className="px-5 py-3.5 whitespace-nowrap text-muted">{formatMoscowDateTime(item.createdAt)}</td>
-                    <td className="px-5 py-3.5 font-medium text-ink">{item.name}</td>
+                    <td className="px-5 py-3.5 font-medium text-ink">
+                      {item.name}
+                      {item.channel === "max" ? (
+                        <span className="ml-2 rounded-full border border-line-strong px-2 py-0.5 text-[0.75rem] font-medium text-muted">MAX</span>
+                      ) : null}
+                    </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">{item.phone || "—"}</td>
                     <td className="px-5 py-3.5">{item.serviceTitle}</td>
                     <td className="px-5 py-3.5">

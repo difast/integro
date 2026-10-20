@@ -74,4 +74,89 @@ export const migrations: Migration[] = [
       CREATE INDEX messenger_clicks_created_at_idx ON messenger_clicks (created_at);
     `,
   },
+  {
+    // Чат-бот MAX: клиенты (диалог с ботом у каждого пользователя один, поэтому сведения о диалоге —
+    // в той же записи), сообщения, внутренние заметки и журнал входящих событий для защиты от дублей.
+    id: "004_max_bot",
+    sql: `
+      CREATE TABLE max_clients (
+        id                     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        max_user_id            bigint NOT NULL UNIQUE,
+        chat_id                bigint,
+        first_name             text NOT NULL DEFAULT '' CHECK (char_length(first_name) <= 200),
+        last_name              text NOT NULL DEFAULT '' CHECK (char_length(last_name) <= 200),
+        username               text CHECK (char_length(username) <= 200),
+        source                 text CHECK (char_length(source) <= 200),
+        phone                  text NOT NULL DEFAULT '' CHECK (char_length(phone) <= 30),
+        phone_digits           text NOT NULL DEFAULT '' CHECK (char_length(phone_digits) <= 15),
+        status                 text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+        mode                   text NOT NULL DEFAULT 'bot' CHECK (mode IN ('bot', 'operator')),
+        needs_reply            boolean NOT NULL DEFAULT false,
+        bot_blocked            boolean NOT NULL DEFAULT false,
+        flow_state             jsonb NOT NULL DEFAULT '{}'::jsonb,
+        consent_at             timestamptz,
+        consent_revision       text CHECK (char_length(consent_revision) <= 40),
+        first_seen_at          timestamptz NOT NULL DEFAULT now(),
+        last_seen_at           timestamptz NOT NULL DEFAULT now(),
+        last_message_at        timestamptz,
+        last_message_preview   text CHECK (char_length(last_message_preview) <= 300),
+        last_message_direction text CHECK (last_message_direction IN ('in', 'out')),
+        updated_at             timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX max_clients_activity_idx ON max_clients (last_seen_at DESC, id DESC);
+      CREATE INDEX max_clients_status_idx ON max_clients (status, needs_reply, last_seen_at DESC);
+      CREATE INDEX max_clients_phone_digits_idx ON max_clients (phone_digits);
+
+      CREATE TABLE max_events (
+        id            bigserial PRIMARY KEY,
+        event_key     text NOT NULL UNIQUE CHECK (char_length(event_key) <= 300),
+        update_type   text NOT NULL CHECK (char_length(update_type) <= 64),
+        max_user_id   bigint,
+        event_time    timestamptz,
+        received_at   timestamptz NOT NULL DEFAULT now(),
+        payload       jsonb,
+        status        text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'done', 'ignored', 'failed')),
+        attempts      integer NOT NULL DEFAULT 0,
+        claimed_at    timestamptz,
+        error         text CHECK (char_length(error) <= 500),
+        processed_at  timestamptz
+      );
+      CREATE INDEX max_events_queue_idx ON max_events (status, received_at) WHERE status IN ('pending', 'processing', 'failed');
+
+      CREATE TABLE max_messages (
+        id               bigserial PRIMARY KEY,
+        client_id        uuid NOT NULL REFERENCES max_clients (id) ON DELETE CASCADE,
+        direction        text NOT NULL CHECK (direction IN ('in', 'out')),
+        author           text NOT NULL CHECK (author IN ('client', 'bot', 'operator')),
+        kind             text NOT NULL CHECK (char_length(kind) <= 32),
+        text             text NOT NULL DEFAULT '' CHECK (char_length(text) <= 4000),
+        attachments      jsonb,
+        external_mid     text UNIQUE CHECK (char_length(external_mid) <= 200),
+        event_id         bigint REFERENCES max_events (id) ON DELETE SET NULL,
+        idempotency_key  uuid UNIQUE,
+        status           text NOT NULL CHECK (status IN ('received', 'pending', 'sending', 'sent', 'failed', 'unknown')),
+        error            text CHECK (char_length(error) <= 500),
+        attempts         integer NOT NULL DEFAULT 0,
+        claimed_at       timestamptz,
+        event_time       timestamptz NOT NULL DEFAULT now(),
+        created_at       timestamptz NOT NULL DEFAULT now(),
+        sent_at          timestamptz
+      );
+      CREATE INDEX max_messages_client_idx ON max_messages (client_id, id DESC);
+      CREATE INDEX max_messages_outbox_idx ON max_messages (status, created_at) WHERE status IN ('pending', 'sending');
+
+      CREATE TABLE max_notes (
+        id          bigserial PRIMARY KEY,
+        client_id   uuid NOT NULL REFERENCES max_clients (id) ON DELETE CASCADE,
+        body        text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 5000),
+        created_at  timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX max_notes_client_idx ON max_notes (client_id, id DESC);
+
+      -- Заявки из чат-бота хранятся в той же таблице, что и заявки с сайта.
+      ALTER TABLE requests ADD COLUMN channel text NOT NULL DEFAULT 'site' CHECK (channel IN ('site', 'max'));
+      ALTER TABLE requests ADD COLUMN max_client_id uuid REFERENCES max_clients (id) ON DELETE SET NULL;
+      CREATE INDEX requests_max_client_idx ON requests (max_client_id) WHERE max_client_id IS NOT NULL;
+    `,
+  },
 ];

@@ -5,9 +5,13 @@ import { defineConfig } from "@playwright/test";
  * и тестовой базы PostgreSQL в TEST_DATABASE_URL — все данные в ней удаляются.
  *
  * Поднимаются два сервера: рабочий (порт 3201) и с недоступной базой (порт 3202)
- * для проверки, что ошибка базы не приводит к сообщению об успешной отправке.
+ * для проверки, что ошибка базы не приводит к сообщению об успешной отправке,
+ * и имитация MAX Bot API (порт 3203) для проверки чат-бота.
  */
 export const E2E_ADMIN_PASSWORD = "e2e-admin-password-123";
+export const E2E_MAX_TOKEN = "e2e-max-token";
+export const E2E_MAX_SECRET = "e2e-max-webhook-secret-0123456789abcdef";
+export const E2E_MAX_MOCK = "http://127.0.0.1:3203";
 
 const common = {
   ADMIN_PASSWORD: E2E_ADMIN_PASSWORD,
@@ -27,9 +31,22 @@ export default defineConfig({
   use: { baseURL: "http://localhost:3201", locale: "ru-RU" },
   webServer: [
     {
+      command: "node tests/e2e/max-mock-server.mjs 3203",
+      url: `${E2E_MAX_MOCK}/__health`,
+      env: { MAX_MOCK_TOKEN: E2E_MAX_TOKEN },
+      reuseExistingServer: false,
+    },
+    {
       command: "npx next start -p 3201",
       url: "http://localhost:3201/kontakty",
-      env: { ...common, DATABASE_URL: process.env.TEST_DATABASE_URL ?? "" },
+      env: {
+        ...common,
+        DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
+        // Чат-бот MAX с имитацией API (tests/e2e/max-mock-server.mjs).
+        MAX_BOT_TOKEN: E2E_MAX_TOKEN,
+        MAX_WEBHOOK_SECRET: E2E_MAX_SECRET,
+        MAX_API_BASE_URL: E2E_MAX_MOCK,
+      },
       reuseExistingServer: false,
     },
     {

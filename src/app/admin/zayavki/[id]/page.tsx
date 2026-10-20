@@ -57,10 +57,31 @@ export default async function AdminRequestPage({ params }: Props) {
         "—"
       ),
     },
+    {
+      label: "Канал",
+      value:
+        request.channel === "max" ? (
+          request.maxClientId ? (
+            <Link href={`/admin/max/${request.maxClientId}`} className="text-link">
+              Чат-бот MAX — открыть диалог
+            </Link>
+          ) : (
+            "Чат-бот MAX (карточка клиента удалена)"
+          )
+        ) : (
+          "Форма на сайте"
+        ),
+    },
     { label: "Направление", value: request.serviceTitle },
     { label: "Страница отправки", value: request.sourcePage ?? "—" },
     { label: "Контекст обращения", value: request.context ?? "—" },
-    { label: "Согласие на обработку ПД", value: `Отмечено, редакция от ${request.consentRevision}` },
+    {
+      label: "Согласие на обработку ПД",
+      value:
+        request.channel === "max"
+          ? `Дано кнопкой в чат-боте MAX, редакция от ${request.consentRevision}`
+          : `Отмечено, редакция от ${request.consentRevision}`,
+    },
     { label: "Изменена", value: `${formatMoscowDateTime(request.updatedAt)} (МСК)` },
   ];
 

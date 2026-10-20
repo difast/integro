@@ -1,4 +1,5 @@
 import "server-only";
+import type { PoolClient } from "pg";
 import { query } from "@/lib/db";
 import { buildWhere, PAGE_SIZE, searchDigits, type RequestFilters } from "./filters";
 import type { RequestStatus } from "./statuses";
@@ -18,9 +19,11 @@ export type RequestRecord = {
   sourcePage: string | null;
   context: string | null;
   consentRevision: string;
+  channel: "site" | "max";
+  maxClientId: string | null;
 };
 
-export type RequestListItem = Pick<RequestRecord, "id" | "createdAt" | "name" | "phone" | "email" | "serviceTitle" | "status">;
+export type RequestListItem = Pick<RequestRecord, "id" | "createdAt" | "name" | "phone" | "email" | "serviceTitle" | "status" | "channel">;
 
 type Row = {
   id: string;
@@ -37,10 +40,12 @@ type Row = {
   source_page: string | null;
   context: string | null;
   consent_revision: string;
+  channel: "site" | "max";
+  max_client_id: string | null;
 };
 
 const FULL_COLUMNS =
-  "id, created_at, updated_at, name, phone, email, service, service_title, message, status, notes, source_page, context, consent_revision";
+  "id, created_at, updated_at, name, phone, email, service, service_title, message, status, notes, source_page, context, consent_revision, channel, max_client_id";
 
 function toRecord(row: Row): RequestRecord {
   return {
@@ -58,6 +63,8 @@ function toRecord(row: Row): RequestRecord {
     sourcePage: row.source_page,
     context: row.context,
     consentRevision: row.consent_revision,
+    channel: row.channel,
+    maxClientId: row.max_client_id,
   };
 }
 
@@ -78,16 +85,23 @@ export type NewRequest = {
   sourcePage: string | null;
   context: string | null;
   consentRevision: string;
+  /** Канал: форма на сайте (по умолчанию) или чат-бот MAX. */
+  channel?: "site" | "max";
+  maxClientId?: string | null;
 };
+
+type Executor = Pick<PoolClient, "query">;
 
 /**
  * Сохраняет заявку. Повторная отправка с тем же ключом (двойное нажатие, повтор
  * запроса) не создаёт дубликат: возвращается { created: false } и id существующей записи.
  */
-export async function createRequest(input: NewRequest): Promise<{ id: string; created: boolean }> {
-  const inserted = await query<{ id: string }>(
-    `INSERT INTO requests (submission_key, name, phone, phone_digits, email, service, service_title, message, source_page, consent_revision, context)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+export async function createRequest(input: NewRequest, db?: Executor): Promise<{ id: string; created: boolean }> {
+  const run = async <T extends { id: string }>(sql: string, params: unknown[]): Promise<T[]> =>
+    db ? (await db.query<T>(sql, params)).rows : query<T>(sql, params);
+  const inserted = await run<{ id: string }>(
+    `INSERT INTO requests (submission_key, name, phone, phone_digits, email, service, service_title, message, source_page, consent_revision, context, channel, max_client_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      ON CONFLICT (submission_key) DO NOTHING
      RETURNING id`,
     [
@@ -102,11 +116,13 @@ export async function createRequest(input: NewRequest): Promise<{ id: string; cr
       input.sourcePage,
       input.consentRevision,
       input.context,
+      input.channel ?? "site",
+      input.maxClientId ?? null,
     ],
   );
   if (inserted[0]) return { id: inserted[0].id, created: true };
 
-  const existing = await query<{ id: string }>("SELECT id FROM requests WHERE submission_key = $1", [input.submissionKey]);
+  const existing = await run<{ id: string }>("SELECT id FROM requests WHERE submission_key = $1", [input.submissionKey]);
   if (!existing[0]) throw new Error("request insert conflict without existing row");
   return { id: existing[0].id, created: false };
 }
@@ -172,4 +188,14 @@ export async function updateRequest(id: string, changes: { status: RequestStatus
 export async function deleteRequest(id: string): Promise<boolean> {
   const rows = await query<{ id: string }>("DELETE FROM requests WHERE id = $1 RETURNING id", [id]);
   return rows.length > 0;
+}
+
+/** Заявки клиента чат-бота MAX — для карточки клиента. */
+export async function listRequestsByMaxClient(maxClientId: string): Promise<RequestListItem[]> {
+  if (!isUuid(maxClientId)) return [];
+  const rows = await query<Row>(
+    `SELECT ${FULL_COLUMNS} FROM requests WHERE max_client_id = $1 ORDER BY created_at DESC LIMIT 50`,
+    [maxClientId],
+  );
+  return rows.map(toRecord);
 }
