@@ -7,6 +7,7 @@ import { services } from "@/config/services";
 import { companyVideo } from "@/config/video";
 import { articleCategories, getArticles } from "@/lib/articles";
 import { getSiteUrl } from "@/lib/site";
+import { JsonLd, organizationJsonLd } from "@/lib/structured-data";
 import { ArticleCard } from "@/components/ui/ArticleCard";
 import { ButtonLink } from "@/components/ui/Button";
 import { RequestButton } from "@/components/request/RequestButton";
@@ -37,6 +38,7 @@ export default function HomePage() {
 
   return (
     <>
+      <JsonLd data={organizationJsonLd()} />
       {/* Первый экран: панель с текстом слева, визуалом справа и полосой быстрых переходов снизу. */}
       <section aria-labelledby="hero-title" className="container-page pt-6 sm:pt-8">
         <div className="panel bg-white p-4 sm:p-6 lg:p-8">
