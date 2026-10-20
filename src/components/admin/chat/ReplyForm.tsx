@@ -37,30 +37,36 @@ export function ReplyForm({ clientId, channelLabel, disabledReason }: { clientId
     <form action={action} className="space-y-3">
       <input type="hidden" name="clientId" value={clientId} />
       <input type="hidden" name="idempotencyKey" value={key} />
-      <label htmlFor="reply" className="text-[0.9375rem] font-medium text-ink">
+      <label htmlFor="reply" className="sr-only">
         Ответ клиенту
       </label>
       <textarea
         id="reply"
         name="text"
-        rows={4}
+        rows={3}
         required
         maxLength={REPLY_MAX_LENGTH}
         value={text}
         onChange={(event) => setText(event.target.value)}
         aria-describedby="reply-hint"
+        placeholder={`Ответ клиенту в ${channelLabel}`}
+        onKeyDown={(event) => {
+          // Ctrl+Enter (⌘+Enter) — отправить.
+          if (event.key === "Enter" && (event.ctrlKey || event.metaKey) && text.trim()) event.currentTarget.form?.requestSubmit();
+        }}
         className="block w-full resize-y rounded-[var(--radius-control)] border border-line-strong bg-white px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-dark focus:outline-none"
       />
-      <p id="reply-hint" className="text-[0.8125rem] text-muted">
-        Сообщение уйдёт клиенту в {channelLabel} от имени бота. После отправки диалог переходит в режим оператора — бот перестаёт
-        отвечать автоматически. Не запрашивайте паспортные данные и платёжные реквизиты.
-        <span className="ml-1 tabular-nums">{text.length}/{REPLY_MAX_LENGTH}</span>
-      </p>
       <ActionMessage state={state} />
-      <button type="submit" disabled={pending || !text.trim()} className={buttonClass("primary", "min-h-11 px-5")}>
-        {pending ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Send aria-hidden="true" className="h-4 w-4" />}
-        Отправить в {channelLabel}
-      </button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p id="reply-hint" className="max-w-md text-[0.75rem] text-muted">
+          Уйдёт от имени бота; диалог перейдёт в режим оператора. Ctrl+Enter — отправить. Не запрашивайте паспортные
+          данные и реквизиты. <span className="tabular-nums">{text.length}/{REPLY_MAX_LENGTH}</span>
+        </p>
+        <button type="submit" disabled={pending || !text.trim()} className={buttonClass("primary", "min-h-11 px-5")}>
+          {pending ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Send aria-hidden="true" className="h-4 w-4" />}
+          Отправить в {channelLabel}
+        </button>
+      </div>
     </form>
   );
 }

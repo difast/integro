@@ -8,7 +8,9 @@ import { getAdapter } from "@/lib/chat/registry";
 import { countChatNeedsReply, listChatClients } from "@/lib/chat/repository";
 import { channelLabels, channels, chatDisplayName } from "@/lib/chat/types";
 import { formatMoscowDateTime } from "@/lib/requests/csv";
+import { getMessengerClickSummary } from "@/lib/stats/repository";
 import { AutoRefresh } from "@/components/admin/chat/AutoRefresh";
+import { WhatsAppPanel } from "@/components/admin/chat/WhatsAppPanel";
 import { ChannelBadge, DialogBadges } from "@/components/admin/chat/badges";
 import { buttonClass } from "@/components/ui/Button";
 
@@ -31,9 +33,20 @@ async function load(filters: ChatFilters) {
   }
 }
 
+async function loadWhatsApp() {
+  try {
+    return await getMessengerClickSummary("whatsapp");
+  } catch (error) {
+    console.error("[admin] failed to load whatsapp clicks:", describeDbError(error));
+    return null;
+  }
+}
+
 export default async function AdminChatsPage({ searchParams }: Props) {
   await requireAdminPage();
   const params = await searchParams;
+  // WhatsApp — вкладка со статистикой нажатий: бота и переписки в админке у него нет.
+  const whatsapp = params.channel === "whatsapp" ? await loadWhatsApp() : undefined;
   const filters = parseChatFilters(params);
   const data = await load(filters);
   const disabled = channels.filter((channel) => !getAdapter(channel).isEnabled()).map((channel) => channelLabels[channel]);
@@ -94,15 +107,32 @@ export default async function AdminChatsPage({ searchParams }: Props) {
             <li key={channel || "all"}>
               <Link
                 href={`/admin/obrashcheniya${chatFiltersToSearch({ ...filters, page: 1, channel })}`}
-                aria-current={filters.channel === channel ? "page" : undefined}
+                aria-current={whatsapp === undefined && filters.channel === channel ? "page" : undefined}
                 className={chip}
               >
                 {channel ? channelLabels[channel] : "Все каналы"}
               </Link>
             </li>
           ))}
+          <li>
+            <Link href="/admin/obrashcheniya?channel=whatsapp" aria-current={whatsapp !== undefined ? "page" : undefined} className={chip}>
+              WhatsApp
+              <span className="text-[0.75rem] opacity-70">нажатия</span>
+            </Link>
+          </li>
         </ul>
       </nav>
+
+      {whatsapp !== undefined ? (
+        whatsapp ? (
+          <WhatsAppPanel summary={whatsapp} />
+        ) : (
+          <p role="alert" className="mt-6 rounded-[var(--radius-card)] border-l-[3px] border-danger bg-white px-5 py-4 text-ink">
+            Не удалось получить статистику нажатий. Обновите страницу позже.
+          </p>
+        )
+      ) : (
+      <>
 
       <nav aria-label="Фильтр по статусу" className="mt-3 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <ul className="flex min-w-max gap-2">
@@ -222,6 +252,8 @@ export default async function AdminChatsPage({ searchParams }: Props) {
           </span>
         </nav>
       ) : null}
+      </>
+      )}
     </div>
   );
 }

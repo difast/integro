@@ -63,3 +63,53 @@ export async function getClickStats(days: number | null): Promise<ClickStats> {
     byDay: byDay.map((row) => ({ ...row, count: Number(row.count) })),
   };
 }
+
+export type MessengerClickSummary = {
+  today: number;
+  last7: number;
+  last30: number;
+  total: number;
+  lastClickAt: Date | null;
+  /** За 30 дней. */
+  byPlacement: { placement: ClickPlacement; count: number }[];
+  /** За 30 дней, 10 страниц с наибольшим числом нажатий. */
+  topPages: { path: string; count: number }[];
+};
+
+/** Сводка нажатий на кнопку одного мессенджера (например, WhatsApp — у него нет бота и переписки на сайте). */
+export async function getMessengerClickSummary(messenger: MessengerKey): Promise<MessengerClickSummary> {
+  const [totals, byPlacement, topPages] = await Promise.all([
+    query<{ today: string; last7: string; last30: string; total: string; last_click_at: Date | null }>(
+      `SELECT
+         count(*) FILTER (WHERE created_at >= date_trunc('day', now() AT TIME ZONE 'Europe/Moscow') AT TIME ZONE 'Europe/Moscow') AS today,
+         count(*) FILTER (WHERE created_at >= now() - interval '7 days') AS last7,
+         count(*) FILTER (WHERE created_at >= now() - interval '30 days') AS last30,
+         count(*) AS total,
+         max(created_at) AS last_click_at
+       FROM messenger_clicks WHERE messenger = $1`,
+      [messenger],
+    ),
+    query<{ placement: ClickPlacement; count: string }>(
+      `SELECT placement, count(*) AS count FROM messenger_clicks
+       WHERE messenger = $1 AND created_at >= now() - interval '30 days'
+       GROUP BY placement ORDER BY count(*) DESC`,
+      [messenger],
+    ),
+    query<{ path: string; count: string }>(
+      `SELECT page_path AS path, count(*) AS count FROM messenger_clicks
+       WHERE messenger = $1 AND created_at >= now() - interval '30 days'
+       GROUP BY page_path ORDER BY count(*) DESC, page_path LIMIT 10`,
+      [messenger],
+    ),
+  ]);
+  const row = totals[0];
+  return {
+    today: Number(row?.today ?? 0),
+    last7: Number(row?.last7 ?? 0),
+    last30: Number(row?.last30 ?? 0),
+    total: Number(row?.total ?? 0),
+    lastClickAt: row?.last_click_at ?? null,
+    byPlacement: byPlacement.map((r) => ({ placement: r.placement, count: Number(r.count) })),
+    topPages: topPages.map((r) => ({ path: r.path, count: Number(r.count) })),
+  };
+}

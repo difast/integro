@@ -245,5 +245,12 @@ test("переходы в мессенджеры учитываются и ви�
   await expect(page.getByRole("row", { name: /Подвал сайта/ })).toContainText("1");
   await expect(page.getByRole("link", { name: "/kontakty" })).toBeVisible();
 
+  // WhatsApp без бота: в «Обращениях» — вкладка со статистикой нажатий.
+  await page.goto("/admin/obrashcheniya?channel=whatsapp");
+  await expect(page.getByText("WhatsApp подключён как обычный аккаунт компании")).toBeVisible();
+  await expect(page.getByTestId("wa-today")).toHaveText("1");
+  await expect(page.getByTestId("wa-total")).toHaveText("1");
+  await expect(page.getByRole("region", { name: "Где нажимали (30 дней)" })).toContainText("Подвал сайта");
+
   await context.close();
 });

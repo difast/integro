@@ -22,6 +22,7 @@ import { formatMoscowDateTime } from "@/lib/requests/csv";
 import { listRequestsByChatClient, type RequestListItem } from "@/lib/requests/repository";
 import { AutoRefresh } from "@/components/admin/chat/AutoRefresh";
 import { ChannelBadge, DialogBadges } from "@/components/admin/chat/badges";
+import { ChatScroller } from "@/components/admin/chat/ChatScroller";
 import { DeleteClient } from "@/components/admin/chat/DeleteClient";
 import { DialogControls } from "@/components/admin/chat/DialogControls";
 import { LinkClients } from "@/components/admin/chat/LinkClients";
@@ -275,44 +276,52 @@ export default async function AdminChatDialogPage({ params, searchParams }: Prop
         <h1 className="text-[1.75rem] leading-tight">{name}</h1>
         <ChannelBadge channel={client.channel} />
         <DialogBadges status={client.status} mode={client.mode} needsReply={client.needsReply} botBlocked={client.botBlocked} />
-        <a href="#reply" className="text-[0.9375rem] text-link">
-          К ответу
-        </a>
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-12">
-        <div className="min-w-0 space-y-4 lg:col-span-7">
-          <section aria-labelledby="dialog" className="rounded-[var(--radius-card)] bg-mist/60 p-4 sm:p-6">
-            <h2 id="dialog" className="text-[0.875rem] font-medium text-muted">
-              Переписка
-            </h2>
-            {messages.hasMore ? (
-              <p className="mt-3 text-center">
-                <Link href={`/admin/obrashcheniya/${client.id}?before=${messages.items[0]?.id ?? ""}`} className="text-[0.875rem] text-link">
-                  Показать более ранние сообщения
+        {/* Переписка и ответ — одно окно: история прокручивается внутри, поле ответа всегда под ней.
+            На широком экране окно закреплено и не уезжает при прокрутке правой колонки. */}
+        <div className="min-w-0 lg:col-span-7 lg:sticky lg:top-4 lg:self-start">
+          <section
+            aria-labelledby="dialog"
+            className="flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-white lg:h-[calc(100vh-18rem)] lg:min-h-[420px]"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
+              <h2 id="dialog" className="text-[0.875rem] font-medium text-muted">
+                Переписка
+              </h2>
+              {messages.hasMore ? (
+                <Link href={`/admin/obrashcheniya/${client.id}?before=${messages.items[0]?.id ?? ""}`} className="text-[0.8125rem] text-link">
+                  Более ранние сообщения
                 </Link>
-              </p>
-            ) : null}
-            {before ? (
-              <p className="mt-3 text-center">
-                <Link href={`/admin/obrashcheniya/${client.id}`} className="text-[0.875rem] text-link">
-                  К последним сообщениям
-                </Link>
-              </p>
-            ) : null}
-            {messages.items.length === 0 ? (
-              <p className="mt-4 text-muted">Сообщений нет.</p>
-            ) : (
-              <ol className="mt-4 space-y-3" aria-label="Сообщения по времени">
-                {messages.items.map((message) => (
-                  <MessageBubble key={message.id} message={message} clientId={client.id} clientName={name} />
-                ))}
-              </ol>
-            )}
+              ) : null}
+            </div>
+            <ChatScroller
+              lastId={messages.items.at(-1)?.id ?? ""}
+              startAtBottom={!before}
+              className="h-[calc(100svh-35rem)] min-h-[200px] overflow-y-auto bg-mist/60 px-3 py-4 focus:outline-none sm:px-5 lg:h-auto lg:min-h-0 lg:flex-1"
+            >
+              {before ? (
+                <p className="mb-3 text-center">
+                  <Link href={`/admin/obrashcheniya/${client.id}`} className="text-[0.875rem] text-link">
+                    К последним сообщениям
+                  </Link>
+                </p>
+              ) : null}
+              {messages.items.length === 0 ? (
+                <p className="text-muted">Сообщений нет.</p>
+              ) : (
+                <ol className="space-y-3" aria-label="Сообщения по времени">
+                  {messages.items.map((message) => (
+                    <MessageBubble key={message.id} message={message} clientId={client.id} clientName={name} />
+                  ))}
+                </ol>
+              )}
+            </ChatScroller>
+            <div id="reply-section" className="shrink-0 border-t border-line px-4 py-4 sm:px-5">
+              <ReplyForm clientId={client.id} channelLabel={label} disabledReason={disabledReason} />
+            </div>
           </section>
-          <Section id="reply-section" title="Ответ">
-            <ReplyForm clientId={client.id} channelLabel={label} disabledReason={disabledReason} />
-          </Section>
         </div>
 
         <div className="min-w-0 space-y-4 lg:col-span-5">

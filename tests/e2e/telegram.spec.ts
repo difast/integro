@@ -115,6 +115,10 @@ test("оператор отвечает из админки — сообщени
 
   const dialog = page.getByRole("list", { name: "Сообщения по времени" });
   await expect(dialog).toContainText("вопрос по оценке доли");
+  // Поле ответа и кнопка видны сразу, без прокрутки страницы.
+  const sendButton = page.getByRole("button", { name: "Отправить в Telegram" });
+  const box = await sendButton.boundingBox();
+  expect(box!.y + box!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
   await request.post(`${E2E_TG_MOCK}/__reset`);
   await page.getByLabel("Ответ клиенту").fill("Здравствуйте, Анна! Уточните, пожалуйста, цель оценки.");
   await page.getByRole("button", { name: "Отправить в Telegram" }).click();
