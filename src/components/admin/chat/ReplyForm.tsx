@@ -8,12 +8,25 @@ import { ActionMessage } from "@/components/admin/RequestEditor";
 import { buttonClass } from "@/components/ui/Button";
 
 const initial: ReplyState = { status: "idle" };
+const draftKey = (clientId: string) => `integro-reply-draft:${clientId}`;
+
+function writeDraft(clientId: string, value: string) {
+  try {
+    if (value) sessionStorage.setItem(draftKey(clientId), value);
+    else sessionStorage.removeItem(draftKey(clientId));
+  } catch {
+    // Хранилище недоступно (приватный режим) — черновик живёт только в состоянии формы.
+  }
+}
 
 /**
  * Ответ оператора. Ключ отправки создаётся при открытии формы и меняется только после того,
  * как сервер обработал ответ с этим ключом: двойное нажатие или повтор запроса не отправят
  * сообщение дважды. После обработки (в том числе с ошибкой) поле очищается — неотправленное
  * сообщение остаётся в истории, и его можно повторить оттуда.
+ *
+ * Черновик хранится в sessionStorage этой вкладки (по карточке клиента): автообновление страницы,
+ * переход в другой раздел или перезагрузка не стирают набранный текст. Закрытие вкладки — стирает.
  */
 export function ReplyForm({ clientId, channelLabel, disabledReason }: { clientId: string; channelLabel: string; disabledReason: string | null }) {
   const [state, action, pending] = useActionState(sendReply, initial);
@@ -22,12 +35,24 @@ export function ReplyForm({ clientId, channelLabel, disabledReason }: { clientId
   const handled = useRef<string | null>(null);
 
   useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(draftKey(clientId));
+      // Восстановление черновика из хранилища браузера возможно только после монтирования.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (saved) setText(saved.slice(0, REPLY_MAX_LENGTH));
+    } catch {
+      // см. writeDraft
+    }
+  }, [clientId]);
+
+  useEffect(() => {
     if (state.resetKey && state.resetKey !== handled.current) {
       handled.current = state.resetKey;
       setKey(crypto.randomUUID());
       setText("");
+      writeDraft(clientId, "");
     }
-  }, [state]);
+  }, [state, clientId]);
 
   if (disabledReason) {
     return <p className="rounded-[var(--radius-control)] border-l-[3px] border-bronze bg-mist px-4 py-3 text-[0.9375rem] text-ink">{disabledReason}</p>;
@@ -47,7 +72,15 @@ export function ReplyForm({ clientId, channelLabel, disabledReason }: { clientId
         required
         maxLength={REPLY_MAX_LENGTH}
         value={text}
-        onChange={(event) => setText(event.target.value)}
+        onChange={(event) => {
+          setText(event.target.value);
+          writeDraft(clientId, event.target.value);
+        }}
+        onFocus={(event) => {
+          // На телефоне экранная клавиатура появляется с задержкой — после неё возвращаем поле в видимую область.
+          const field = event.currentTarget;
+          window.setTimeout(() => field.scrollIntoView({ block: "nearest", behavior: "smooth" }), 300);
+        }}
         aria-describedby="reply-hint"
         placeholder={`Ответ клиенту в ${channelLabel}`}
         onKeyDown={(event) => {

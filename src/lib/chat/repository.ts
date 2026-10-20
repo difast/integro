@@ -40,6 +40,7 @@ export type ChatClient = ChatClientListItem & {
   lastReminderAt: Date | null;
   surveyDueAt: Date | null;
   surveySentAt: Date | null;
+  qualifiedAt: Date | null;
 };
 
 export type ChatMessageRecord = {
@@ -86,13 +87,14 @@ type ClientRow = {
   last_reminder_at: Date | null;
   survey_due_at: Date | null;
   survey_sent_at: Date | null;
+  qualified_at: Date | null;
   request_count: string;
 };
 
 const CLIENT_COLUMNS = `c.id, c.channel, c.external_user_id, c.chat_id, c.first_name, c.last_name, c.username, c.source, c.phone,
   c.status, c.mode, c.needs_reply, c.bot_blocked, c.flow_state, c.consent_at, c.consent_revision, c.first_seen_at,
   c.last_seen_at, c.last_message_at, c.last_message_preview, c.last_message_direction, c.person_id,
-  c.reminder_stage, c.last_reminder_at, c.survey_due_at, c.survey_sent_at,
+  c.reminder_stage, c.last_reminder_at, c.survey_due_at, c.survey_sent_at, c.qualified_at,
   (SELECT count(*) FROM requests r WHERE r.chat_client_id = c.id) AS request_count`;
 
 function toClient(row: ClientRow): ChatClient {
@@ -123,6 +125,7 @@ function toClient(row: ClientRow): ChatClient {
     lastReminderAt: row.last_reminder_at,
     surveyDueAt: row.survey_due_at,
     surveySentAt: row.survey_sent_at,
+    qualifiedAt: row.qualified_at,
     requestCount: Number(row.request_count),
   };
 }
@@ -230,7 +233,7 @@ export async function addChatNote(clientId: string, body: string): Promise<boole
 
 export async function updateChatClient(
   clientId: string,
-  changes: { status?: "open" | "closed"; needsReply?: boolean; mode?: "bot" | "operator" },
+  changes: { status?: "open" | "closed"; needsReply?: boolean; mode?: "bot" | "operator"; qualified?: boolean },
 ): Promise<boolean> {
   const sets: string[] = [];
   const params: unknown[] = [clientId];
@@ -259,6 +262,10 @@ export async function updateChatClient(
     sets.push(`mode = $${params.length}`);
     // Возврат боту начинает сценарий с главного меню (незавершённая заявка сбрасывается).
     if (changes.mode === "bot") sets.push(`flow_state = '{"step":"menu"}'::jsonb`);
+  }
+  if (changes.qualified !== undefined) {
+    // Первая отметка сохраняется: повторное включение не сдвигает дату квалификации.
+    sets.push(changes.qualified ? "qualified_at = coalesce(qualified_at, now())" : "qualified_at = NULL");
   }
   if (sets.length === 0) return false;
   const rows = await query<{ id: string }>(`UPDATE chat_clients SET ${sets.join(", ")}, updated_at = now() WHERE id = $1 RETURNING id`, params);

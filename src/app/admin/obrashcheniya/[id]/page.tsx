@@ -30,6 +30,8 @@ import { NoteForm } from "@/components/admin/chat/NoteForm";
 import { ReplyForm } from "@/components/admin/chat/ReplyForm";
 import { RetryButton } from "@/components/admin/chat/RetryButton";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { ManualRequestForm } from "@/components/admin/ManualRequestForm";
+import { services } from "@/config/services";
 
 export const metadata: Metadata = { title: "Диалог" };
 
@@ -326,7 +328,14 @@ export default async function AdminChatDialogPage({ params, searchParams }: Prop
 
         <div className="min-w-0 space-y-4 lg:col-span-5">
           <Section id="dialog-controls" title="Управление диалогом">
-            <DialogControls clientId={client.id} mode={client.mode} status={client.status} needsReply={client.needsReply} />
+            <DialogControls
+              clientId={client.id}
+              mode={client.mode}
+              status={client.status}
+              needsReply={client.needsReply}
+              qualified={client.qualifiedAt !== null}
+              hasRequest={requests.length > 0}
+            />
           </Section>
           <Section id="client" title="Клиент">
             <dl className="divide-y divide-line border-t border-line">
@@ -340,7 +349,7 @@ export default async function AdminChatDialogPage({ params, searchParams }: Prop
           </Section>
           <Section id="requests" title={`Заявки (${requests.length})`}>
             {requests.length === 0 ? (
-              <p className="text-[0.9375rem] text-muted">Заявок из бота нет.</p>
+              <p className="text-[0.9375rem] text-muted">Заявок по этому диалогу нет.</p>
             ) : (
               <ul className="divide-y divide-line">
                 {requests.map((request) => (
@@ -359,6 +368,25 @@ export default async function AdminChatDialogPage({ params, searchParams }: Prop
                 ))}
               </ul>
             )}
+          </Section>
+          <Section id="new-request" title="Создать заявку из диалога">
+            <details>
+              <summary className="cursor-pointer text-[0.9375rem] font-medium text-ink hover:text-bronze-deep">
+                Оформить заявку вручную
+              </summary>
+              <p className="mt-2 text-[0.8125rem] text-muted">
+                Если клиент договорился с оператором в переписке, не проходя сценарий бота. Канал — {label}, заявка
+                будет привязана к этой карточке.
+              </p>
+              <div className="mt-4">
+                <ManualRequestForm
+                  channels={[]}
+                  services={services.map((s) => ({ value: s.slug, label: s.title }))}
+                  chatClientId={client.id}
+                  defaults={{ name: chatDisplayName(client) || "", phone: client.phone ?? "" }}
+                />
+              </div>
+            </details>
           </Section>
           <Section id="linked" title="Тот же человек в других каналах">
             <LinkClients clientId={client.id} linked={linked.map(toCard)} candidates={candidates.map(toCard)} query={linkQuery} />

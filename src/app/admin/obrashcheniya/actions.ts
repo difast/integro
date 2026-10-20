@@ -124,6 +124,8 @@ export async function updateDialog(_prev: ActionState, formData: FormData): Prom
     replied: { needsReply: false, message: "Отметка «нужен ответ» снята." },
     operator: { mode: "operator", message: "Режим оператора: бот не отвечает автоматически." },
     bot: { mode: "bot", message: "Диалог передан боту: автоответы включены, сценарий начнётся с главного меню." },
+    qualify: { qualified: true, message: "Обращение отмечено как квалифицированный лид." },
+    unqualify: { qualified: false, message: "Отметка «квалифицированный лид» снята." },
   };
   const change = typeof action === "string" ? changes[action] : undefined;
   if (!change) return { status: "error", message: "Неизвестное действие." };

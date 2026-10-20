@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Bot, CheckCheck, CircleDot, Headset, Lock, LockOpen } from "lucide-react";
+import { BadgeCheck, Bot, CheckCheck, CircleDot, Headset, Lock, LockOpen } from "lucide-react";
 import { updateDialog } from "@/app/admin/obrashcheniya/actions";
 import type { ActionState } from "@/app/admin/actions";
 import { ActionMessage } from "@/components/admin/RequestEditor";
@@ -15,11 +15,15 @@ export function DialogControls({
   mode,
   status,
   needsReply,
+  qualified,
+  hasRequest,
 }: {
   clientId: string;
   mode: "bot" | "operator";
   status: "open" | "closed";
   needsReply: boolean;
+  qualified: boolean;
+  hasRequest: boolean;
 }) {
   const [state, action, pending] = useActionState(updateDialog, initial);
   return (
@@ -69,6 +73,29 @@ export function DialogControls({
             Вернуть в работу
           </button>
         )}
+      </div>
+      <div>
+        <p className="text-[0.9375rem] font-medium text-ink">Квалификация</p>
+        <p className="mt-1 text-[0.8125rem] text-muted">
+          {hasRequest
+            ? "По обращению есть заявка — в аналитике оно считается квалифицированным лидом."
+            : qualified
+              ? "Отмечено как квалифицированный лид: потребность и контакт подтверждены."
+              : "Отметьте, если потребность клиента понятна и подходит под услуги компании."}
+        </p>
+        <div className="mt-2">
+          <button
+            type="submit"
+            name="action"
+            value={qualified ? "unqualify" : "qualify"}
+            disabled={pending}
+            aria-pressed={qualified}
+            className={btn}
+          >
+            <BadgeCheck aria-hidden="true" className="h-4 w-4" />
+            {qualified ? "Снять отметку «квалифицированный лид»" : "Квалифицированный лид"}
+          </button>
+        </div>
       </div>
       <ActionMessage state={state} />
     </form>
