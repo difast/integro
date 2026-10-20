@@ -186,3 +186,12 @@ describe("MAX: HTTP-клиент", () => {
     expect(error.retryable).toBe(true);
   });
 });
+
+describe("MAX: значения в кавычках", () => {
+  it("кавычки вокруг токена и секрета отбрасываются", () => {
+    const config = getMaxConfig({ MAX_BOT_TOKEN: '"tok"', MAX_WEBHOOK_SECRET: `'${"b".repeat(40)}'` } as never);
+    expect(config.token).toBe("tok");
+    expect(config.secret).toBe("b".repeat(40));
+    expect(isMaxEnabled(config)).toBe(true);
+  });
+});

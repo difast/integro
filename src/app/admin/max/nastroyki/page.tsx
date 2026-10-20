@@ -10,7 +10,7 @@ import { SetupActions } from "@/components/admin/max/SetupActions";
 
 export const metadata: Metadata = { title: "Настройки MAX" };
 
-function Row({ ok, label, hint }: { ok: boolean; label: string; hint?: string }) {
+function Row({ ok, label, hint, invalid = false }: { ok: boolean; label: string; hint?: string; invalid?: boolean }) {
   return (
     <li className="flex gap-3 py-3">
       {ok ? (
@@ -20,7 +20,7 @@ function Row({ ok, label, hint }: { ok: boolean; label: string; hint?: string })
       )}
       <span>
         <span className="block text-[0.9375rem] text-ink">
-          {label} — <span className="font-medium">{ok ? "задано" : "не задано"}</span>
+          {label} — <span className="font-medium">{ok ? "задано" : invalid ? "задано с ошибкой" : "не задано"}</span>
         </span>
         {hint ? <span className="mt-0.5 block text-[0.8125rem] text-muted">{hint}</span> : null}
       </span>
@@ -54,6 +54,7 @@ export default async function AdminMaxSettingsPage() {
           <Row ok={!has("token_missing")} label="MAX_BOT_TOKEN" hint="Токен бота — выдаёт @MasterBot в MAX." />
           <Row
             ok={!has("secret_missing") && !has("secret_invalid")}
+            invalid={has("secret_invalid")}
             label="MAX_WEBHOOK_SECRET"
             hint={has("secret_invalid") ? maxProblemText.secret_invalid : "Случайная строка 32+ символов, например: openssl rand -hex 32."}
           />

@@ -59,8 +59,10 @@ function isLocalHttp(url: URL): boolean {
 
 export function getMaxConfig(env: NodeJS.ProcessEnv = process.env): MaxConfig {
   const problems: MaxConfigProblem[] = [];
-  const token = env.MAX_BOT_TOKEN?.trim() || null;
-  const secret = env.MAX_WEBHOOK_SECRET?.trim() || null;
+  // Кавычки вокруг значения (частая ошибка при вводе в панели хостинга) отбрасываются.
+  const unquote = (value: string | undefined) => value?.trim().replace(/^(["'])(.*)\1$/, "$2").trim() || null;
+  const token = unquote(env.MAX_BOT_TOKEN);
+  const secret = unquote(env.MAX_WEBHOOK_SECRET);
   if (!token) problems.push("token_missing");
   if (!secret) problems.push("secret_missing");
   else if (!SECRET_RE.test(secret)) problems.push("secret_invalid");
