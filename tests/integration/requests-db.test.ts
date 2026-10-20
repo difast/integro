@@ -41,7 +41,7 @@ suite("requests database", () => {
   });
 
   beforeEach(async () => {
-    await db.query("TRUNCATE requests, admin_sessions, admin_login_attempts");
+    await db.query("TRUNCATE requests, admin_sessions, admin_login_attempts CASCADE");
   });
 
   afterAll(async () => {

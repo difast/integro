@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { AdminNav } from "@/components/admin/AdminNav";
+import { NotificationBell } from "@/components/admin/notifications/NotificationBell";
 import { LogoMark } from "@/components/ui/Logo";
 import { isAdmin } from "@/lib/admin/auth";
 import { logout } from "./actions";
@@ -30,15 +31,19 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </span>
           </Link>
           {signedIn ? (
+            <div className="flex items-center gap-2">
+            <NotificationBell />
             <form action={logout}>
               <button
                 type="submit"
                 className="inline-flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] border border-line-strong px-4 text-[0.875rem] font-medium text-ink transition-colors hover:border-dark"
               >
                 <LogOut aria-hidden="true" className="h-4 w-4" />
-                Выйти
+                <span className="sr-only sm:hidden">Выйти</span>
+                <span className="hidden sm:inline">Выйти</span>
               </button>
             </form>
+            </div>
           ) : null}
         </div>
       </header>

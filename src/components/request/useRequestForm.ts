@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import { submitRequest } from "@/app/(site)/kontakty/actions";
 import { initialRequestState, validateRequest, type RequestFieldName } from "@/lib/request-form";
+import { readAttribution } from "@/lib/requests/attribution";
 
 function newSubmissionKey(): string {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
@@ -49,6 +50,7 @@ export function useRequestForm({ idPrefix = "", pageParams }: { idPrefix?: strin
     for (const [key, value] of Object.entries(pageParams ?? {})) params.set(key, value);
     const query = params.toString();
     formData.set("page", `${window.location.pathname}${query ? `?${query}` : ""}`);
+    formData.set("attribution", readAttribution());
     formAction(formData);
   };
 

@@ -3,6 +3,7 @@ import { services } from "@/config/services";
 import { servicePages } from "@/config/service-pages";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { AttributionCapture } from "@/components/layout/AttributionCapture";
 import { CookieNotice } from "@/components/layout/CookieNotice";
 import { RequestModalProvider } from "@/components/request/RequestModal";
 
@@ -23,6 +24,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       </main>
       <SiteFooter />
       <CookieNotice />
+      <AttributionCapture />
     </RequestModalProvider>
   );
 }

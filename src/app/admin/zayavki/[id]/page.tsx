@@ -6,21 +6,59 @@ import { ArrowLeft } from "lucide-react";
 import { requireAdminPage } from "@/lib/admin/auth";
 import { describeDbError } from "@/lib/db";
 import { formatMoscowDateTime } from "@/lib/requests/csv";
-import { getRequest, type RequestRecord } from "@/lib/requests/repository";
-import { DeleteRequest, RequestEditor } from "@/components/admin/RequestEditor";
+import { describeAttribution } from "@/lib/requests/attribution";
+import { channelLabel, paymentLabel, stageLabel } from "@/lib/requests/funnel";
+import { listRequestHistory, type HistoryRecord } from "@/lib/requests/history";
+import { requestNumberOf } from "@/lib/requests/number";
+import { getRequest, listAssignees, listLossReasons, type LossReason, type RequestRecord } from "@/lib/requests/repository";
+import { statusLabel } from "@/lib/requests/statuses";
+import { DeleteRequest } from "@/components/admin/RequestEditor";
+import { RequestWorkForm } from "@/components/admin/RequestWorkForm";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 
 export const metadata: Metadata = { title: "Заявка" };
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-export default async function AdminRequestPage({ params }: Props) {
+const fieldNames: Record<string, string> = {
+  created: "Создана",
+  status: "Статус",
+  stage: "Этап",
+  loss_reason: "Причина потери",
+  assignee: "Ответственный",
+  channel: "Канал",
+  source_note: "Источник",
+  deal_amount: "Сумма",
+  currency: "Валюта",
+  contract_date: "Дата договора",
+  payment_status: "Оплата",
+  paid_amount: "Получено",
+  paid_at: "Дата оплаты",
+};
+const actorNames: Record<string, string> = { admin: "сотрудник", system: "система", site: "сайт", bot: "бот" };
+
+function historyValue(field: string, value: string | null, reasons: LossReason[]): string {
+  if (value === null || value === "") return "—";
+  if (field === "status") return statusLabel(value);
+  if (field === "stage") return stageLabel(value);
+  if (field === "channel" || field === "created") return channelLabel(value);
+  if (field === "payment_status") return paymentLabel(value);
+  if (field === "loss_reason") return reasons.find((r) => String(r.id) === value)?.title ?? value;
+  return value;
+}
+
+export default async function AdminRequestPage({ params, searchParams }: Props) {
   await requireAdminPage();
   const { id } = await params;
+  const created = (await searchParams).created === "1";
 
   let request: RequestRecord | null;
+  let history: HistoryRecord[] = [];
+  let reasons: LossReason[] = [];
+  let assignees: string[] = [];
   try {
     request = await getRequest(id);
+    if (request) [history, reasons, assignees] = await Promise.all([listRequestHistory(request.id), listLossReasons(true), listAssignees()]);
   } catch (error) {
     console.error("[admin] failed to load request:", describeDbError(error));
     return (
@@ -72,6 +110,9 @@ export default async function AdminRequestPage({ params }: Props) {
           "Форма на сайте"
         ),
     },
+    { label: "Номер", value: requestNumberOf(request.id) },
+    { label: "Источник посещения", value: describeAttribution(request.attribution) },
+    ...(request.attribution?.landing ? [{ label: "Страница входа", value: request.attribution.landing }] : []),
     { label: "Направление", value: request.serviceTitle },
     { label: "Страница отправки", value: request.sourcePage ?? "—" },
     { label: "Контекст обращения", value: request.context ?? "—" },
@@ -93,9 +134,15 @@ export default async function AdminRequestPage({ params }: Props) {
       </Link>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <h1 className="text-[1.75rem] leading-tight">Заявка: {request.name}</h1>
+        <h1 className="text-[1.75rem] leading-tight break-words">Заявка: {request.name}</h1>
         <StatusBadge status={request.status} />
+        <span className="rounded-full border border-line-strong px-2.5 py-1 text-[0.8125rem] font-medium text-ink">{stageLabel(request.stage)}</span>
       </div>
+      {created ? (
+        <p role="status" className="mt-4 rounded-[var(--radius-control)] border-l-[3px] border-dark bg-white px-4 py-3 text-ink">
+          Заявка создана.
+        </p>
+      ) : null}
 
       <div className="mt-8 grid gap-4 lg:grid-cols-12">
         <div className="min-w-0 space-y-4 lg:col-span-7">
@@ -126,8 +173,29 @@ export default async function AdminRequestPage({ params }: Props) {
               Работа с заявкой
             </h2>
             <div className="mt-4">
-              <RequestEditor id={request.id} status={request.status} notes={request.notes} />
+              <RequestWorkForm request={request} lossReasons={reasons.filter((r) => r.active || r.id === request.lossReasonId)} assignees={assignees} />
             </div>
+          </section>
+          <section aria-labelledby="request-history" className="rounded-[var(--radius-card)] bg-white p-6 sm:p-8">
+            <h2 id="request-history" className="text-[0.875rem] font-medium text-muted">
+              История изменений
+            </h2>
+            {history.length === 0 ? (
+              <p className="mt-3 text-[0.9375rem] text-muted">Изменений пока нет.</p>
+            ) : (
+              <ol className="mt-3 space-y-2 text-[0.875rem]">
+                {history.map((h) => (
+                  <li key={h.id} className="break-words">
+                    <span className="text-muted">{formatMoscowDateTime(h.changedAt)} · {actorNames[h.actor] ?? h.actor}:</span>{" "}
+                    <span className="text-ink">
+                      {h.field === "created"
+                        ? `заявка создана (${historyValue("created", h.newValue, reasons)})`
+                        : `${fieldNames[h.field] ?? h.field}: ${historyValue(h.field, h.oldValue, reasons)} → ${historyValue(h.field, h.newValue, reasons)}`}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
           </section>
           <section aria-labelledby="request-delete" className="rounded-[var(--radius-card)] bg-white p-6 sm:p-8">
             <h2 id="request-delete" className="text-[0.875rem] font-medium text-muted">

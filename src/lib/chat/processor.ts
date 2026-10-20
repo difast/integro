@@ -8,12 +8,17 @@ import { describeDbError, query, withTransaction } from "@/lib/db";
 import { isMailConfigured, sendMail } from "@/lib/mail";
 import { searchDigits } from "@/lib/requests/filters";
 import { createRequest } from "@/lib/requests/repository";
+import { deliverPendingNotifications } from "@/lib/notifications/delivery";
+import { notify, throttledKey } from "@/lib/notifications/service";
+import { ADMIN_LINK_PREFIX, consumeTelegramLink } from "@/lib/notifications/telegram-link";
+import { markError, markOk } from "@/lib/ops/monitor";
 import { absoluteUrl } from "@/lib/site";
+import { telegramApi } from "@/lib/telegram/api";
 import type { ChannelAdapter } from "./adapter";
 import { ChannelApiError } from "./errors";
 import { getAdapter } from "./registry";
 import { directionLabel, keyboards, readState, runScenario, type BotInput, type BotReply, type Step } from "./scenario";
-import { channelLabels, isChannel, type AttachmentMeta, type BotButton, type Channel, type IncomingEvent } from "./types";
+import { channelLabels, chatDisplayName, isChannel, type AttachmentMeta, type BotButton, type Channel, type IncomingEvent } from "./types";
 
 /**
  * Обработка событий мессенджеров и отправка сообщений — общая для всех каналов.
@@ -36,6 +41,7 @@ type Known = Exclude<IncomingEvent, { kind: "ignored" }>;
 
 type ClientRow = {
   id: string;
+  needs_reply: boolean;
   mode: "bot" | "operator";
   status: "open" | "closed";
   flow_state: unknown;
@@ -116,6 +122,10 @@ export async function storeEvent(channel: Channel, raw: unknown): Promise<{ id: 
 type AfterCommit = {
   adapter: ChannelAdapter;
   outbox: string[];
+  /** Созданы уведомления — запустить доставку после фиксации транзакции. */
+  notified: boolean;
+  /** Ответ сотруднику на привязку Telegram-уведомлений (вне карточек клиентов). */
+  adminReply: { chatId: number; text: string } | null;
   callback: { event: Extract<Known, { kind: "callback" }>; notification?: string; clearKeyboard: boolean } | null;
   notify: { requestId: string; number: string; summary: string[] } | null;
 };
@@ -137,7 +147,7 @@ async function upsertClient(db: PoolClient, channel: Channel, event: Known): Pro
     [channel, user.id, event.chatId, user.firstName, user.lastName, user.username, source, event.time],
   );
   const { rows } = await db.query<ClientRow>(
-    `SELECT id, mode, status, flow_state, consent_revision, bot_blocked
+    `SELECT id, needs_reply, mode, status, flow_state, consent_revision, bot_blocked
      FROM chat_clients WHERE channel = $1 AND external_user_id = $2 FOR UPDATE`,
     [channel, user.id],
   );
@@ -220,10 +230,44 @@ export function requestNumber(id: string): string {
 }
 
 async function handleEvent(db: PoolClient, adapter: ChannelAdapter, eventId: string, event: Known): Promise<AfterCommit> {
-  const after: AfterCommit = { adapter, outbox: [], callback: null, notify: null };
+  const after: AfterCommit = { adapter, outbox: [], callback: null, notify: null, notified: false, adminReply: null };
+
+  // Привязка Telegram-уведомлений сотрудника: /start admin_<код>. Карточка клиента не создаётся.
+  if (adapter.channel === "telegram" && event.kind === "start" && event.payload?.startsWith(ADMIN_LINK_PREFIX) && event.chatId) {
+    const ok = await consumeTelegramLink(db, event.payload.slice(ADMIN_LINK_PREFIX.length), event.chatId, chatDisplayName(event.user));
+    after.adminReply = {
+      chatId: event.chatId,
+      text: ok
+        ? "Служебные уведомления ООО «Интегро» подключены. Отключить — в админке: «Уведомления» → «Настройки»."
+        : "Ссылка для подключения уведомлений недействительна или устарела. Создайте новую в админке.",
+    };
+    if (ok) {
+      await notify({ type: "system", channel: "telegram", title: "Подключены уведомления в Telegram", body: chatDisplayName(event.user), link: "/admin/uvedomleniya/nastroyki", dedupeKey: `tg_link:${eventId}` }, db);
+    }
+    return after;
+  }
+
   const client = await upsertClient(db, adapter.channel, event);
   const fresh = await insertIncoming(db, client.id, eventId, event);
   if (!fresh) return after;
+  const cardLink = `/admin/obrashcheniya/${client.id}`;
+  const label = channelLabels[adapter.channel];
+  const markNeedsReply = async () => {
+    if (client.needs_reply) return;
+    client.needs_reply = true;
+    await notify({ type: "needs_reply", channel: adapter.channel, title: `Нужен ответ · ${label}`, body: chatDisplayName(event.user) || "Клиент", link: cardLink, dedupeKey: `needs_reply:${eventId}` }, db);
+    after.notified = true;
+  };
+
+  // Уведомление о входящем сообщении (не чаще одного за интервал по одному диалогу).
+  if (event.kind === "message") {
+    const text = event.text ? preview(event.text).slice(0, 120) : "(вложение)";
+    const id = await notify(
+      { type: "message", channel: adapter.channel, title: `Новое сообщение · ${label}`, body: `${chatDisplayName(event.user) || "Клиент"}: ${text}`, link: cardLink, dedupeKey: await throttledKey(`message:${client.id}`) },
+      db,
+    );
+    if (id) after.notified = true;
+  }
 
   if (event.kind === "stop") {
     await db.query("UPDATE chat_clients SET bot_blocked = true, updated_at = now() WHERE id = $1", [client.id]);
@@ -246,6 +290,7 @@ async function handleEvent(db: PoolClient, adapter: ChannelAdapter, eventId: str
   if (event.kind === "callback" && event.payload.startsWith("survey:")) {
     after.callback = { event, notification: callbackLabel(event.payload), clearKeyboard: true };
     if (event.payload === "survey:yes") {
+      await markNeedsReply();
       await db.query(
         `UPDATE chat_clients SET needs_reply = true,
            flow_state = CASE WHEN mode = 'bot' THEN '{"step":"specialist","forwarded":true}'::jsonb ELSE flow_state END,
@@ -263,6 +308,7 @@ async function handleEvent(db: PoolClient, adapter: ChannelAdapter, eventId: str
 
   // Режим оператора: бот молчит, диалог помечается как требующий ответа.
   if (client.mode === "operator") {
+    await markNeedsReply();
     await db.query("UPDATE chat_clients SET needs_reply = true, updated_at = now() WHERE id = $1", [client.id]);
     return after;
   }
@@ -274,6 +320,7 @@ async function handleEvent(db: PoolClient, adapter: ChannelAdapter, eventId: str
   );
   if (Number(recent[0]?.count ?? 0) >= BOT_REPLIES_PER_MINUTE) {
     console.warn(`[${adapter.channel}] auto-reply limit reached for a client, waiting for an operator`);
+    await markNeedsReply();
     await db.query("UPDATE chat_clients SET needs_reply = true, updated_at = now() WHERE id = $1", [client.id]);
     return after;
   }
@@ -308,6 +355,14 @@ async function handleEvent(db: PoolClient, adapter: ChannelAdapter, eventId: str
       db,
     );
     const number = requestNumber(saved.id);
+    if (saved.created) {
+      await db.query("INSERT INTO request_history (request_id, field, new_value, actor) VALUES ($1, 'created', $2, 'bot')", [saved.id, adapter.channel]);
+      await notify(
+        { type: "request_bot", channel: adapter.channel, title: `Новая заявка № ${number} · ${label}`, body: `${draft.name} — ${directionLabel(draft.direction)}`, link: `/admin/zayavki/${saved.id}`, dedupeKey: `request:${saved.id}` },
+        db,
+      );
+      after.notified = true;
+    }
     replies.push({ text: botTexts.submitted(number), buttons: [[{ type: "callback", text: botButtons.menu, payload: "menu" }]] });
     if (saved.created) {
       after.notify = {
@@ -326,6 +381,7 @@ async function handleEvent(db: PoolClient, adapter: ChannelAdapter, eventId: str
     }
   }
   if (adapter.adaptReplies) replies = adapter.adaptReplies(previous.step, result.state.step, replies);
+  if (result.needsReply) await markNeedsReply();
 
   await db.query(
     `UPDATE chat_clients SET
@@ -353,6 +409,13 @@ async function handleEvent(db: PoolClient, adapter: ChannelAdapter, eventId: str
 }
 
 async function runAfterCommit(after: AfterCommit): Promise<void> {
+  if (after.adminReply) {
+    try {
+      await telegramApi.sendMessage(after.adminReply.chatId, after.adminReply.text);
+    } catch (error) {
+      console.warn("[telegram] admin link reply failed:", errorText(error));
+    }
+  }
   if (after.callback) {
     try {
       await after.adapter.acknowledgeCallback(after.callback.event, {
@@ -364,6 +427,7 @@ async function runAfterCommit(after: AfterCommit): Promise<void> {
     }
   }
   for (const id of after.outbox) await sendOutboxMessage(id);
+  if (after.notified) await deliverPendingNotifications();
 
   if (after.notify && isMailConfigured()) {
     const link = absoluteUrl(`/admin/zayavki/${after.notify.requestId}`);
@@ -391,10 +455,10 @@ async function runAfterCommit(after: AfterCommit): Promise<void> {
  * событие захватывается атомарно, обработанное повторно не выполняется.
  */
 export async function processEvent(eventId: string): Promise<void> {
-  const claimed = await query<{ payload: unknown; channel: string }>(
+  const claimed = await query<{ payload: unknown; channel: string; attempts: number }>(
     `UPDATE chat_events SET status = 'processing', attempts = attempts + 1, claimed_at = now()
      WHERE id = $1 AND status IN ('pending', 'failed') AND attempts < ${MAX_ATTEMPTS}
-     RETURNING payload, channel`,
+     RETURNING payload, channel, attempts`,
     [eventId],
   );
   const row = claimed[0];
@@ -417,10 +481,30 @@ export async function processEvent(eventId: string): Promise<void> {
       return result;
     });
   } catch (error) {
-    console.error(`[${adapter.channel}] event processing failed:`, errorText(error));
-    await query("UPDATE chat_events SET status = 'failed', error = $2 WHERE id = $1", [eventId, errorText(error)]).catch(() => {});
+    const text = errorText(error);
+    const final = row.attempts >= MAX_ATTEMPTS;
+    console.error(`[${adapter.channel}] event processing failed${final ? " (no more attempts)" : ""}:`, text);
+    // Повтор с растущим интервалом: 1, 2, 4, 8 минут; после последней попытки — уведомление администратору.
+    await query("UPDATE chat_events SET status = 'failed', error = $2, next_attempt_at = now() + make_interval(mins => $3) WHERE id = $1", [
+      eventId,
+      text,
+      2 ** (row.attempts - 1),
+    ]).catch(() => {});
+    await markError(adapter.channel, "process_event", text, { ref: `event:${eventId}`, result: final ? "failed" : "retry" });
+    if (final) {
+      await notify({
+        type: "processing_failed",
+        channel: adapter.channel,
+        title: `Не удалось обработать событие · ${channelLabels[adapter.channel]}`,
+        body: text,
+        link: "/admin/sistema",
+        dedupeKey: `event_failed:${eventId}`,
+      });
+      await deliverPendingNotifications();
+    }
     return;
   }
+  await markOk(adapter.channel, "process_event");
   await runAfterCommit(after);
 }
 
@@ -440,11 +524,13 @@ export async function sendOutboxMessage(messageId: string): Promise<SendOutcome>
     chat_id: string | null;
     bot_blocked: boolean;
     client_id: string;
+    attempts: number;
+    author: string;
   }>(
     `UPDATE chat_messages m SET status = 'sending', attempts = m.attempts + 1, claimed_at = now(), error = NULL
      FROM chat_clients c
      WHERE m.id = $1 AND m.status = 'pending' AND m.direction = 'out' AND c.id = m.client_id
-     RETURNING m.text, m.attachments, c.channel, c.external_user_id, c.chat_id, c.bot_blocked, m.client_id`,
+     RETURNING m.text, m.attachments, c.channel, c.external_user_id, c.chat_id, c.bot_blocked, m.client_id, m.attempts, m.author`,
     [messageId],
   );
   const row = claimed[0];
@@ -484,6 +570,7 @@ export async function sendOutboxMessage(messageId: string): Promise<SendOutcome>
       `UPDATE chat_clients SET last_message_at = now(), last_message_preview = $2, last_message_direction = 'out', updated_at = now() WHERE id = $1`,
       [row.client_id, preview(row.text)],
     );
+    await markOk(adapter.channel, "send_message");
     return { status: "sent" };
   } catch (error) {
     const unknown = error instanceof ChannelApiError && error.kind === "unknown";
@@ -493,6 +580,16 @@ export async function sendOutboxMessage(messageId: string): Promise<SendOutcome>
     if (error instanceof ChannelApiError && error.blocked) {
       await query("UPDATE chat_clients SET bot_blocked = true, updated_at = now() WHERE id = $1", [row.client_id]);
     }
+    await markError(adapter.channel, "send_message", text, { ref: `message:${messageId}`, result: "failed" });
+    await notify({
+      type: "send_failed",
+      channel: adapter.channel,
+      title: `${unknown ? "Результат отправки неизвестен" : "Сообщение не отправлено"} · ${channelLabels[adapter.channel]}`,
+      body: `${row.author === "operator" ? "Ответ оператора" : "Ответ бота"}: ${text}`,
+      link: `/admin/obrashcheniya/${row.client_id}`,
+      dedupeKey: `send_failed:${messageId}:${row.attempts}`,
+    });
+    await deliverPendingNotifications();
     return { status: unknown ? "unknown" : "failed", error: text };
   }
 }
@@ -588,7 +685,7 @@ export async function sweepChats(): Promise<void> {
     const events = await query<{ id: string }>(
       `SELECT id FROM chat_events
        WHERE (status = 'pending' AND received_at < now() - interval '30 seconds')
-          OR (status = 'failed' AND attempts < ${MAX_ATTEMPTS} AND coalesce(claimed_at, received_at) < now() - interval '1 minute')
+          OR (status = 'failed' AND attempts < ${MAX_ATTEMPTS} AND coalesce(next_attempt_at, claimed_at, received_at) <= now())
        ORDER BY id LIMIT 50`,
     );
     for (const event of events) await processEvent(String(event.id));
@@ -599,6 +696,7 @@ export async function sweepChats(): Promise<void> {
     for (const message of messages) await sendOutboxMessage(String(message.id));
 
     await runFollowUps();
+    await deliverPendingNotifications();
 
     // Минимизация: исходный JSON событий, которые не удалось обработать, хранится не дольше 7 дней,
     // служебные записи о событиях (без содержимого) — 30 дней; для защиты от повторной доставки этого достаточно.

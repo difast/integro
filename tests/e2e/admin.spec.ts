@@ -16,7 +16,7 @@ test.beforeAll(async () => {
     if (rows[0].t) break;
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  await db.query("TRUNCATE requests, admin_sessions, admin_login_attempts");
+  await db.query("TRUNCATE requests, admin_sessions, admin_login_attempts CASCADE");
 });
 
 test.afterAll(async () => {
@@ -153,13 +153,13 @@ test("статус и заметки сохраняются; поиск, фил�
 
   await page.goto("/admin");
   await page.getByRole("row", { name: /Анна Смирнова/ }).getByRole("link", { name: /Открыть/ }).click();
-  await page.getByLabel("Статус", { exact: true }).selectOption("waiting_client");
+  await page.getByLabel("Статус обработки").selectOption("waiting_client");
   await page.getByLabel("Внутренние заметки").fill("Перезвонить в пятницу");
   await page.getByRole("button", { name: "Сохранить" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Изменения сохранены" })).toBeVisible();
 
   await page.reload();
-  await expect(page.getByLabel("Статус", { exact: true })).toHaveValue("waiting_client");
+  await expect(page.getByLabel("Статус обработки")).toHaveValue("waiting_client");
   await expect(page.getByLabel("Внутренние заметки")).toHaveValue("Перезвонить в пятницу");
 
   await page.getByRole("button", { name: "Удалить заявку" }).click();

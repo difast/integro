@@ -217,4 +217,161 @@ export const migrations: Migration[] = [
       CREATE INDEX chat_clients_survey_idx ON chat_clients (survey_due_at) WHERE survey_due_at IS NOT NULL;
     `,
   },
+  {
+    // CRM: уведомления, мониторинг, резервные копии, воронка и выручка. Существующие данные не меняются:
+    // новые поля заявок получают значения по умолчанию (этап «Заявка», оплата «нет»).
+    id: "007_crm_operations",
+    sql: `
+      -- Настройки (уведомления, сроки хранения и т. п.). Секреты здесь не хранятся.
+      CREATE TABLE app_settings (
+        key         text PRIMARY KEY CHECK (char_length(key) <= 100),
+        value       jsonb NOT NULL,
+        updated_at  timestamptz NOT NULL DEFAULT now()
+      );
+
+      -- Уведомления: одна запись на событие (dedupe_key), доставка — отдельными строками по каналам.
+      CREATE TABLE notifications (
+        id          bigserial PRIMARY KEY,
+        type        text NOT NULL CHECK (type IN ('message', 'request_site', 'request_bot', 'needs_reply', 'send_failed', 'processing_failed', 'backup_failed', 'system')),
+        channel     text NOT NULL CHECK (char_length(channel) <= 20),
+        title       text NOT NULL CHECK (char_length(title) <= 200),
+        body        text NOT NULL DEFAULT '' CHECK (char_length(body) <= 500),
+        link        text CHECK (char_length(link) <= 300),
+        dedupe_key  text NOT NULL UNIQUE CHECK (char_length(dedupe_key) <= 200),
+        created_at  timestamptz NOT NULL DEFAULT now(),
+        read_at     timestamptz
+      );
+      CREATE INDEX notifications_created_idx ON notifications (created_at DESC, id DESC);
+      CREATE INDEX notifications_unread_idx ON notifications (created_at DESC) WHERE read_at IS NULL;
+
+      CREATE TABLE push_subscriptions (
+        id               bigserial PRIMARY KEY,
+        endpoint         text NOT NULL UNIQUE CHECK (char_length(endpoint) <= 1000),
+        p256dh           text NOT NULL CHECK (char_length(p256dh) <= 200),
+        auth             text NOT NULL CHECK (char_length(auth) <= 100),
+        label            text NOT NULL DEFAULT '' CHECK (char_length(label) <= 100),
+        created_at       timestamptz NOT NULL DEFAULT now(),
+        last_success_at  timestamptz,
+        failures         integer NOT NULL DEFAULT 0
+      );
+
+      -- Получатели служебных уведомлений в Telegram (привязаны одноразовым кодом из админки).
+      CREATE TABLE notification_recipients (
+        id            bigserial PRIMARY KEY,
+        transport     text NOT NULL DEFAULT 'telegram' CHECK (transport IN ('telegram')),
+        chat_id       bigint NOT NULL,
+        display_name  text NOT NULL DEFAULT '' CHECK (char_length(display_name) <= 200),
+        active        boolean NOT NULL DEFAULT true,
+        created_at    timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (transport, chat_id)
+      );
+
+      CREATE TABLE admin_link_codes (
+        code_hash   text PRIMARY KEY,
+        expires_at  timestamptz NOT NULL,
+        used_at     timestamptz
+      );
+
+      CREATE TABLE notification_deliveries (
+        id               bigserial PRIMARY KEY,
+        notification_id  bigint NOT NULL REFERENCES notifications (id) ON DELETE CASCADE,
+        transport        text NOT NULL CHECK (transport IN ('push', 'telegram')),
+        target_id        bigint NOT NULL,
+        status           text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sending', 'sent', 'failed', 'skipped')),
+        attempts         integer NOT NULL DEFAULT 0,
+        next_attempt_at  timestamptz NOT NULL DEFAULT now(),
+        claimed_at       timestamptz,
+        error            text CHECK (char_length(error) <= 300),
+        sent_at          timestamptz,
+        UNIQUE (notification_id, transport, target_id)
+      );
+      CREATE INDEX notification_deliveries_queue_idx ON notification_deliveries (next_attempt_at) WHERE status IN ('pending', 'sending');
+
+      -- Журнал операций интеграций: ошибки, повторы, дубликаты. Без токенов, заголовков и персональных данных.
+      CREATE TABLE system_events (
+        id          bigserial PRIMARY KEY,
+        created_at  timestamptz NOT NULL DEFAULT now(),
+        channel     text NOT NULL CHECK (char_length(channel) <= 20),
+        operation   text NOT NULL CHECK (char_length(operation) <= 40),
+        result      text NOT NULL CHECK (result IN ('ok', 'error', 'retry', 'duplicate', 'failed')),
+        ref         text CHECK (char_length(ref) <= 200),
+        message     text NOT NULL DEFAULT '' CHECK (char_length(message) <= 500)
+      );
+      CREATE INDEX system_events_created_idx ON system_events (created_at DESC, id DESC);
+      CREATE INDEX system_events_filter_idx ON system_events (channel, result, created_at DESC);
+
+      -- Последний успех и последняя ошибка по каждой операции каждого канала (для панели «Система»).
+      CREATE TABLE integration_status (
+        key            text PRIMARY KEY CHECK (char_length(key) <= 60),
+        last_ok_at     timestamptz,
+        last_error_at  timestamptz,
+        last_error     text CHECK (char_length(last_error) <= 500),
+        details        jsonb,
+        updated_at     timestamptz NOT NULL DEFAULT now()
+      );
+
+      CREATE TABLE backup_runs (
+        id           bigserial PRIMARY KEY,
+        started_at   timestamptz NOT NULL DEFAULT now(),
+        finished_at  timestamptz,
+        status       text NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'ok', 'failed')),
+        trigger      text NOT NULL CHECK (trigger IN ('schedule', 'manual')),
+        size_bytes   bigint,
+        row_count    bigint,
+        location     text CHECK (char_length(location) <= 300),
+        error        text CHECK (char_length(error) <= 500)
+      );
+      CREATE INDEX backup_runs_started_idx ON backup_runs (started_at DESC);
+
+      -- Повтор обработки событий с растущим интервалом.
+      ALTER TABLE chat_events ADD COLUMN next_attempt_at timestamptz;
+
+      -- Квалифицированный лид (отмечает оператор).
+      ALTER TABLE chat_clients ADD COLUMN qualified_at timestamptz;
+
+      -- Воронка, сделка, оплата, источник, ответственный.
+      CREATE TABLE loss_reasons (
+        id      serial PRIMARY KEY,
+        title   text NOT NULL UNIQUE CHECK (char_length(title) BETWEEN 1 AND 100),
+        active  boolean NOT NULL DEFAULT true,
+        sort    integer NOT NULL DEFAULT 0
+      );
+      INSERT INTO loss_reasons (title, sort) VALUES
+        ('Цена', 10), ('Клиент перестал отвечать', 20), ('Выбрал конкурента', 30),
+        ('Услуга не подходит', 40), ('Не удалось связаться', 50), ('Другое', 100);
+
+      ALTER TABLE requests DROP CONSTRAINT requests_channel_check;
+      ALTER TABLE requests ADD CONSTRAINT requests_channel_check
+        CHECK (channel IN ('site', 'max', 'telegram', 'whatsapp', 'avito', 'phone', 'email', 'other'));
+      ALTER TABLE requests ADD COLUMN source_note text CHECK (char_length(source_note) <= 200);
+      ALTER TABLE requests ADD COLUMN attribution jsonb;
+      ALTER TABLE requests ADD COLUMN stage text NOT NULL DEFAULT 'request'
+        CHECK (stage IN ('request', 'negotiation', 'priced', 'won', 'lost'));
+      ALTER TABLE requests ADD COLUMN stage_changed_at timestamptz;
+      ALTER TABLE requests ADD COLUMN loss_reason_id integer REFERENCES loss_reasons (id) ON DELETE SET NULL;
+      ALTER TABLE requests ADD COLUMN loss_comment text CHECK (char_length(loss_comment) <= 500);
+      ALTER TABLE requests ADD COLUMN assignee text CHECK (char_length(assignee) <= 100);
+      ALTER TABLE requests ADD COLUMN deal_amount numeric(14, 2) CHECK (deal_amount >= 0);
+      ALTER TABLE requests ADD COLUMN currency text NOT NULL DEFAULT 'RUB' CHECK (currency ~ '^[A-Z]{3}$');
+      ALTER TABLE requests ADD COLUMN contract_date date;
+      ALTER TABLE requests ADD COLUMN payment_status text NOT NULL DEFAULT 'none' CHECK (payment_status IN ('none', 'partial', 'paid'));
+      ALTER TABLE requests ADD COLUMN paid_amount numeric(14, 2) CHECK (paid_amount >= 0);
+      ALTER TABLE requests ADD COLUMN paid_at date;
+      CREATE INDEX requests_stage_idx ON requests (stage, created_at DESC);
+      CREATE INDEX requests_channel_created_idx ON requests (channel, created_at DESC);
+
+      -- История изменений заявки: статус, этап, источник, ответственный, сумма, оплата.
+      CREATE TABLE request_history (
+        id          bigserial PRIMARY KEY,
+        request_id  uuid NOT NULL REFERENCES requests (id) ON DELETE CASCADE,
+        field       text NOT NULL CHECK (char_length(field) <= 40),
+        old_value   text CHECK (char_length(old_value) <= 300),
+        new_value   text CHECK (char_length(new_value) <= 300),
+        actor       text NOT NULL CHECK (actor IN ('admin', 'system', 'site', 'bot')),
+        changed_at  timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX request_history_request_idx ON request_history (request_id, changed_at);
+      CREATE INDEX request_history_stage_idx ON request_history (field, new_value, request_id);
+    `,
+  },
 ];

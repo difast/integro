@@ -123,6 +123,17 @@ export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>)
   }
 }
 
+/** Отдельное соединение из пула (для операций со своей транзакцией, например резервной копии). */
+export async function withClient<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    return await fn(client);
+  } finally {
+    client.release();
+  }
+}
+
 /**
  * Краткое описание ошибки для журнала: код и текст без параметров запроса.
  * Поле detail драйвера может содержать значения полей (персональные данные) — его не выводим.

@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { company } from "@/config/company";
 import { services } from "@/config/services";
 import { getClientIp } from "@/lib/client-ip";
@@ -8,7 +9,12 @@ import { isMailConfigured, sendMail } from "@/lib/mail";
 import { isRateLimited } from "@/lib/rate-limit";
 import { limits, validateRequest, type RequestFields, type RequestFormState } from "@/lib/request-form";
 import { describeRequestContext } from "@/lib/requests/context";
+import { deliverPendingNotifications } from "@/lib/notifications/delivery";
+import { notify } from "@/lib/notifications/service";
+import { markError, markOk } from "@/lib/ops/monitor";
+import { recordRequestCreated } from "@/lib/requests/history";
 import { createRequest, isUuid } from "@/lib/requests/repository";
+import { parseAttribution } from "@/lib/requests/attribution";
 import { absoluteUrl } from "@/lib/site";
 
 const MIN_FILL_MS = 3_000;
@@ -103,13 +109,29 @@ export async function submitRequest(_prev: RequestFormState, formData: FormData)
         sourcePage: page,
         context,
         consentRevision: company.legalRevisionDate,
+        attribution: parseAttribution(formData.get("attribution")),
       });
       requestId = saved.id;
       isNew = saved.created;
     } catch (error) {
       // В журнал — только код и текст ошибки, без данных заявки.
       console.error("[request-form] failed to save request:", describeDbError(error));
+      await markError("site", "create_request", describeDbError(error));
       return { status: "error", message: SUBMIT_ERROR, values };
+    }
+    if (isNew && requestId) {
+      const id = requestId;
+      await markOk("site", "create_request");
+      await recordRequestCreated(id, "site");
+      await notify({
+        type: "request_site",
+        channel: "site",
+        title: `Новая заявка с сайта: ${serviceTitle}`,
+        body: values.name,
+        link: `/admin/zayavki/${id}`,
+        dedupeKey: `request:${id}`,
+      });
+      after(() => deliverPendingNotifications());
     }
   }
 

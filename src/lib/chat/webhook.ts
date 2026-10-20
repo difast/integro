@@ -1,6 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import { describeDbError, isDatabaseConfigured } from "@/lib/db";
+import { markError, markOk, recordEvent } from "@/lib/ops/monitor";
 import { processEvent, storeEvent, sweepChats } from "./processor";
 import { isWebhookSecretValid } from "./secret";
 import type { Channel } from "./types";
@@ -24,12 +25,16 @@ function tooManyFailures(key: string): boolean {
   return Boolean(entry && entry.resetAt > Date.now() && entry.count >= FAILED_AUTH_LIMIT);
 }
 
-function recordFailure(key: string) {
+function recordFailure(key: string): number {
   const now = Date.now();
   if (failedAuth.size > 5_000) for (const [k, v] of failedAuth) if (v.resetAt <= now) failedAuth.delete(k);
   const entry = failedAuth.get(key);
-  if (!entry || entry.resetAt <= now) failedAuth.set(key, { count: 1, resetAt: now + 10 * 60_000 });
-  else entry.count += 1;
+  if (!entry || entry.resetAt <= now) {
+    failedAuth.set(key, { count: 1, resetAt: now + 10 * 60_000 });
+    return 1;
+  }
+  entry.count += 1;
+  return entry.count;
 }
 
 const reply = (status: number, text: string) =>
@@ -49,7 +54,8 @@ export function createWebhookHandler(options: {
     if (tooManyFailures(limiterKey)) return reply(429, "Too many requests");
 
     if (!isWebhookSecretValid(request.headers.get(options.secretHeader), options.getSecret())) {
-      recordFailure(limiterKey);
+      // В журнал — только первая отклонённая попытка за окно (адрес не записывается).
+      if (recordFailure(limiterKey) === 1) await recordEvent(options.channel, "webhook", "error", { message: "Запрос с неверным секретом отклонён" });
       console.warn(`[${options.channel}] webhook request with an invalid secret rejected`);
       return reply(401, "Unauthorized");
     }
@@ -71,9 +77,12 @@ export function createWebhookHandler(options: {
       stored = await storeEvent(options.channel, raw);
     } catch (error) {
       console.error(`[${options.channel}] failed to store webhook event:`, describeDbError(error));
+      await markError(options.channel, "webhook", `Событие не сохранено (база недоступна): ${describeDbError(error)}`);
       return reply(503, "Temporarily unavailable");
     }
     if (!stored) return reply(400, "Unsupported update");
+    await markOk(options.channel, "webhook");
+    if (stored.duplicate) await recordEvent(options.channel, "webhook", "duplicate", { message: "Повторная доставка события — дубль не создан" });
 
     if (!stored.duplicate) {
       const id = stored.id;

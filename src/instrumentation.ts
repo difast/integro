@@ -38,8 +38,15 @@ export async function register() {
   else console.info(`[max] chat bot off: ${max.problems.filter((p) => !urlProblem(p)).map((p) => maxProblemText[p]).join(" ")}`);
   if (isTelegramEnabled(telegram)) console.info(`[telegram] bot on, webhook ${telegram.webhookUrl ?? "(TELEGRAM_WEBHOOK_URL is not set)"}`);
   else console.info(`[telegram] bot off: ${telegram.problems.filter((p) => !urlProblem(p)).map((p) => telegramProblemText[p]).join(" ")}`);
-  if (!isMaxEnabled(max) && !isTelegramEnabled(telegram)) return;
-  const { sweepChats } = await import("@/lib/chat/processor");
-  const timer = setInterval(() => void sweepChats(), 60_000);
+  // Фоновый цикл: досылка, уведомления, резервные копии, сроки хранения, проверка интеграций.
+  const { getBackupConfig } = await import("@/lib/backup/config");
+  const backup = getBackupConfig();
+  console.info(
+    backup.key && backup.s3
+      ? `[backup] daily backups on: ${backup.s3.endpoint}/${backup.s3.bucket}/${backup.prefix}, ${backup.hourMsk}:00 MSK, keep ${backup.retentionDays} days`
+      : `[backup] daily backups off: ${backup.problems.join(" ") || "set BACKUP_S3_* to store backups"}`,
+  );
+  const { maintenanceTick } = await import("@/lib/ops/scheduler");
+  const timer = setInterval(() => void maintenanceTick(), 60_000);
   timer.unref?.();
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ChevronRight, Download, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, Download, Plus, Search } from "lucide-react";
+import { channelLabel, stageLabel } from "@/lib/requests/funnel";
 import { requireAdminPage } from "@/lib/admin/auth";
 import { describeDbError } from "@/lib/db";
 import { formatMoscowDateTime } from "@/lib/requests/csv";
@@ -71,6 +72,10 @@ export default async function AdminRequestsPage({ searchParams }: Props) {
           </dl>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/admin/zayavki/novaya" className={buttonClass("primary", "min-h-11 px-4")}>
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            Новая заявка
+          </Link>
           {hasFilters ? (
             <a href={exportFiltered} className={buttonClass("outline", "min-h-11 bg-white px-4")}>
               <Download aria-hidden="true" className="h-4 w-4" />
@@ -149,8 +154,31 @@ export default async function AdminRequestsPage({ searchParams }: Props) {
             {hasFilters ? "По заданным условиям заявок не найдено." : "Заявок пока нет."}
           </p>
         ) : (
-          // relative: скрытые подписи (sr-only) позиционируются внутри прокручиваемой области.
-          <div className="relative overflow-x-auto">
+          <>
+          {/* Телефон: карточки вместо широкой таблицы. */}
+          <ul className="divide-y divide-line sm:hidden" aria-label="Заявки">
+            {list.items.map((item) => (
+              <li key={item.id}>
+                <Link href={`/admin/zayavki/${item.id}`} className="block px-4 py-3.5 active:bg-mist/60">
+                  <span className="flex items-start justify-between gap-3">
+                    <span className="min-w-0 font-medium break-words text-ink">{item.name}</span>
+                    <span className="shrink-0 text-[0.75rem] text-muted">{formatMoscowDateTime(item.createdAt)}</span>
+                  </span>
+                  <span className="mt-1 block text-[0.875rem] text-muted">
+                    {item.serviceTitle}
+                    {item.phone ? ` · ${item.phone}` : ""}
+                  </span>
+                  <span className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <StatusBadge status={item.status} />
+                    <span className="rounded-full border border-line-strong px-2 py-0.5 text-[0.75rem] text-ink">{stageLabel(item.stage)}</span>
+                    {item.channel !== "site" ? <span className="rounded-full border border-line-strong px-2 py-0.5 text-[0.75rem] text-muted">{channelLabel(item.channel)}</span> : null}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {/* relative: скрытые подписи (sr-only) позиционируются внутри прокручиваемой области. */}
+          <div className="relative hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[760px] border-collapse text-left text-[0.9375rem]">
               <thead>
                 <tr className="border-b border-line text-[0.8125rem] text-muted">
@@ -184,7 +212,7 @@ export default async function AdminRequestsPage({ searchParams }: Props) {
                       {item.name}
                       {item.channel !== "site" ? (
                         <span className="ml-2 rounded-full border border-line-strong px-2 py-0.5 text-[0.75rem] font-medium text-muted">
-                          {item.channel === "telegram" ? "Telegram" : "MAX"}
+                          {channelLabel(item.channel)}
                         </span>
                       ) : null}
                     </td>
@@ -208,6 +236,7 @@ export default async function AdminRequestsPage({ searchParams }: Props) {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

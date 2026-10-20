@@ -1,6 +1,9 @@
 import "server-only";
 import type { PoolClient } from "pg";
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
+import { recordChanges } from "./history";
+import type { Attribution } from "./attribution";
+import type { PaymentStatus, RequestChannel, RequestStage } from "./funnel";
 import { buildWhere, PAGE_SIZE, searchDigits, type RequestFilters } from "./filters";
 import type { RequestStatus } from "./statuses";
 
@@ -19,11 +22,24 @@ export type RequestRecord = {
   sourcePage: string | null;
   context: string | null;
   consentRevision: string;
-  channel: "site" | "max" | "telegram";
+  channel: RequestChannel;
   chatClientId: string | null;
+  sourceNote: string | null;
+  attribution: Attribution | null;
+  stage: RequestStage;
+  stageChangedAt: Date | null;
+  lossReasonId: number | null;
+  lossComment: string | null;
+  assignee: string | null;
+  dealAmount: string | null;
+  currency: string;
+  contractDate: string | null;
+  paymentStatus: PaymentStatus;
+  paidAmount: string | null;
+  paidAt: string | null;
 };
 
-export type RequestListItem = Pick<RequestRecord, "id" | "createdAt" | "name" | "phone" | "email" | "serviceTitle" | "status" | "channel">;
+export type RequestListItem = Pick<RequestRecord, "id" | "createdAt" | "name" | "phone" | "email" | "serviceTitle" | "status" | "channel" | "stage" | "assignee">;
 
 type Row = {
   id: string;
@@ -40,12 +56,26 @@ type Row = {
   source_page: string | null;
   context: string | null;
   consent_revision: string;
-  channel: "site" | "max" | "telegram";
+  channel: RequestChannel;
   chat_client_id: string | null;
+  source_note: string | null;
+  attribution: Attribution | null;
+  stage: RequestStage;
+  stage_changed_at: Date | null;
+  loss_reason_id: number | null;
+  loss_comment: string | null;
+  assignee: string | null;
+  deal_amount: string | null;
+  currency: string;
+  contract_date: string | null;
+  payment_status: PaymentStatus;
+  paid_amount: string | null;
+  paid_at: string | null;
 };
 
-const FULL_COLUMNS =
-  "id, created_at, updated_at, name, phone, email, service, service_title, message, status, notes, source_page, context, consent_revision, channel, chat_client_id";
+const FULL_COLUMNS = `id, created_at, updated_at, name, phone, email, service, service_title, message, status, notes, source_page, context, consent_revision, channel, chat_client_id,
+  source_note, attribution, stage, stage_changed_at, loss_reason_id, loss_comment, assignee, deal_amount, currency,
+  to_char(contract_date, 'YYYY-MM-DD') AS contract_date, payment_status, paid_amount, to_char(paid_at, 'YYYY-MM-DD') AS paid_at`;
 
 function toRecord(row: Row): RequestRecord {
   return {
@@ -65,6 +95,19 @@ function toRecord(row: Row): RequestRecord {
     consentRevision: row.consent_revision,
     channel: row.channel,
     chatClientId: row.chat_client_id,
+    sourceNote: row.source_note,
+    attribution: row.attribution,
+    stage: row.stage,
+    stageChangedAt: row.stage_changed_at,
+    lossReasonId: row.loss_reason_id,
+    lossComment: row.loss_comment,
+    assignee: row.assignee,
+    dealAmount: row.deal_amount,
+    currency: row.currency,
+    contractDate: row.contract_date,
+    paymentStatus: row.payment_status,
+    paidAmount: row.paid_amount,
+    paidAt: row.paid_at,
   };
 }
 
@@ -86,8 +129,10 @@ export type NewRequest = {
   context: string | null;
   consentRevision: string;
   /** Канал: форма на сайте (по умолчанию) или чат-бот мессенджера. */
-  channel?: "site" | "max" | "telegram";
+  channel?: RequestChannel;
   chatClientId?: string | null;
+  attribution?: Attribution | null;
+  sourceNote?: string | null;
 };
 
 type Executor = Pick<PoolClient, "query">;
@@ -100,8 +145,8 @@ export async function createRequest(input: NewRequest, db?: Executor): Promise<{
   const run = async <T extends { id: string }>(sql: string, params: unknown[]): Promise<T[]> =>
     db ? (await db.query<T>(sql, params)).rows : query<T>(sql, params);
   const inserted = await run<{ id: string }>(
-    `INSERT INTO requests (submission_key, name, phone, phone_digits, email, service, service_title, message, source_page, consent_revision, context, channel, chat_client_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    `INSERT INTO requests (submission_key, name, phone, phone_digits, email, service, service_title, message, source_page, consent_revision, context, channel, chat_client_id, attribution, source_note, stage_changed_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now())
      ON CONFLICT (submission_key) DO NOTHING
      RETURNING id`,
     [
@@ -118,6 +163,8 @@ export async function createRequest(input: NewRequest, db?: Executor): Promise<{
       input.context,
       input.channel ?? "site",
       input.chatClientId ?? null,
+      input.attribution ? JSON.stringify(input.attribution) : null,
+      input.sourceNote ?? null,
     ],
   );
   if (inserted[0]) return { id: inserted[0].id, created: true };
@@ -198,4 +245,91 @@ export async function listRequestsByChatClient(chatClientId: string): Promise<Re
     [chatClientId],
   );
   return rows.map(toRecord);
+}
+
+// --- Работа с заявкой: статус, воронка, сделка, оплата, источник (с историей изменений) ---
+
+export type RequestWorkChanges = {
+  status: RequestStatus;
+  notes: string;
+  stage: RequestStage;
+  lossReasonId: number | null;
+  lossComment: string | null;
+  assignee: string | null;
+  channel: RequestChannel;
+  sourceNote: string | null;
+  dealAmount: string | null;
+  currency: string;
+  contractDate: string | null;
+  paymentStatus: PaymentStatus;
+  paidAmount: string | null;
+  paidAt: string | null;
+};
+
+/** Сохраняет изменения и записывает в историю каждое изменённое поле (кроме заметок). */
+export async function updateRequestWork(id: string, changes: RequestWorkChanges): Promise<boolean> {
+  if (!isUuid(id)) return false;
+  return withTransaction(async (db) => {
+    const { rows } = await db.query<Row>(`SELECT ${FULL_COLUMNS} FROM requests WHERE id = $1 FOR UPDATE`, [id]);
+    const before = rows[0];
+    if (!before) return false;
+    await db.query(
+      `UPDATE requests SET status = $2, notes = $3, stage = $4,
+         stage_changed_at = CASE WHEN stage <> $4 THEN now() ELSE stage_changed_at END,
+         loss_reason_id = $5, loss_comment = $6, assignee = $7, channel = $8, source_note = $9,
+         deal_amount = $10, currency = $11, contract_date = $12, payment_status = $13, paid_amount = $14, paid_at = $15,
+         updated_at = now()
+       WHERE id = $1`,
+      [
+        id,
+        changes.status,
+        changes.notes,
+        changes.stage,
+        changes.stage === "lost" ? changes.lossReasonId : null,
+        changes.stage === "lost" ? changes.lossComment : null,
+        changes.assignee,
+        changes.channel,
+        changes.sourceNote,
+        changes.dealAmount,
+        changes.currency,
+        changes.contractDate,
+        changes.paymentStatus,
+        changes.paidAmount,
+        changes.paidAt,
+      ],
+    );
+    const money = (v: string | null) => (v === null ? null : Number(v).toFixed(2));
+    await recordChanges(db, id, [
+      { field: "status", oldValue: before.status, newValue: changes.status },
+      { field: "stage", oldValue: before.stage, newValue: changes.stage },
+      { field: "loss_reason", oldValue: before.loss_reason_id?.toString() ?? null, newValue: changes.stage === "lost" ? (changes.lossReasonId?.toString() ?? null) : null },
+      { field: "assignee", oldValue: before.assignee, newValue: changes.assignee },
+      { field: "channel", oldValue: before.channel, newValue: changes.channel },
+      { field: "source_note", oldValue: before.source_note, newValue: changes.sourceNote },
+      { field: "deal_amount", oldValue: money(before.deal_amount), newValue: money(changes.dealAmount) },
+      { field: "currency", oldValue: before.currency, newValue: changes.currency },
+      { field: "contract_date", oldValue: before.contract_date, newValue: changes.contractDate },
+      { field: "payment_status", oldValue: before.payment_status, newValue: changes.paymentStatus },
+      { field: "paid_amount", oldValue: money(before.paid_amount), newValue: money(changes.paidAmount) },
+      { field: "paid_at", oldValue: before.paid_at, newValue: changes.paidAt },
+    ]);
+    return true;
+  });
+}
+
+export type LossReason = { id: number; title: string; active: boolean; sort: number };
+
+export async function listLossReasons(includeInactive = false): Promise<LossReason[]> {
+  return query<LossReason>(`SELECT id, title, active, sort FROM loss_reasons ${includeInactive ? "" : "WHERE active"} ORDER BY sort, id`);
+}
+
+export async function saveLossReason(input: { id?: number; title: string; active: boolean; sort: number }): Promise<void> {
+  if (input.id) await query("UPDATE loss_reasons SET title = $2, active = $3, sort = $4 WHERE id = $1", [input.id, input.title, input.active, input.sort]);
+  else await query("INSERT INTO loss_reasons (title, active, sort) VALUES ($1, $2, $3)", [input.title, input.active, input.sort]);
+}
+
+/** Распределение заявок по ответственным — для фильтра аналитики. */
+export async function listAssignees(): Promise<string[]> {
+  const rows = await query<{ assignee: string }>("SELECT DISTINCT assignee FROM requests WHERE assignee IS NOT NULL AND assignee <> '' ORDER BY assignee LIMIT 100");
+  return rows.map((r) => r.assignee);
 }

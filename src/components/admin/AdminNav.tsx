@@ -6,7 +6,10 @@ import { usePathname } from "next/navigation";
 const items = [
   { href: "/admin", label: "Заявки" },
   { href: "/admin/obrashcheniya", label: "Обращения" },
-  { href: "/admin/statistika", label: "Статистика" },
+  { href: "/admin/analitika", label: "Аналитика" },
+  { href: "/admin/statistika", label: "Переходы" },
+  { href: "/admin/uvedomleniya", label: "Уведомления" },
+  { href: "/admin/sistema", label: "Система" },
 ];
 
 /** Разделы панели. Раздел «Заявки» активен и на карточке заявки. */
