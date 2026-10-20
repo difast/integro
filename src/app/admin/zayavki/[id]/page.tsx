@@ -60,13 +60,13 @@ export default async function AdminRequestPage({ params }: Props) {
     {
       label: "Канал",
       value:
-        request.channel === "max" ? (
-          request.maxClientId ? (
-            <Link href={`/admin/max/${request.maxClientId}`} className="text-link">
-              Чат-бот MAX — открыть диалог
+        request.channel !== "site" ? (
+          request.chatClientId ? (
+            <Link href={`/admin/obrashcheniya/${request.chatClientId}`} className="text-link">
+              {request.channel === "telegram" ? "Telegram-бот" : "Чат-бот MAX"} — открыть диалог
             </Link>
           ) : (
-            "Чат-бот MAX (карточка клиента удалена)"
+            `${request.channel === "telegram" ? "Telegram-бот" : "Чат-бот MAX"} (карточка клиента удалена)`
           )
         ) : (
           "Форма на сайте"
@@ -78,8 +78,8 @@ export default async function AdminRequestPage({ params }: Props) {
     {
       label: "Согласие на обработку ПД",
       value:
-        request.channel === "max"
-          ? `Дано кнопкой в чат-боте MAX, редакция от ${request.consentRevision}`
+        request.channel !== "site"
+          ? `Дано кнопкой в боте (${request.channel === "telegram" ? "Telegram" : "MAX"}), редакция от ${request.consentRevision}`
           : `Отмечено, редакция от ${request.consentRevision}`,
     },
     { label: "Изменена", value: `${formatMoscowDateTime(request.updatedAt)} (МСК)` },

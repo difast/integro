@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { MaxApiError, maxApi } from "@/lib/max/api";
 import { getMaxConfig, isMaxEnabled } from "@/lib/max/config";
-import { isWebhookSecretValid } from "@/lib/max/secret";
+import { isWebhookSecretValid } from "@/lib/chat/secret";
 import { maxDisplayName, parseUpdate, phoneFromVcf } from "@/lib/max/types";
 
 const SECRET = "a".repeat(40);

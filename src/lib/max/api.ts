@@ -2,6 +2,7 @@ import "server-only";
 import http from "node:http";
 import https from "node:https";
 import { rootCertificates } from "node:tls";
+import { ChannelApiError, withSafeRetry } from "@/lib/chat/errors";
 import { getMaxConfig, type MaxConfig } from "./config";
 import type { MaxButton } from "./types";
 
@@ -13,33 +14,13 @@ import type { MaxButton } from "./types";
  * ни токен, ни адрес запроса с параметрами, ни тело запроса.
  */
 
-/**
- * Виды ошибок:
- * - http     — MAX ответил кодом ошибки (запрос обработан и отклонён; 429 — превышен лимит);
- * - connect  — соединение не установлено (DNS, отказ, TLS): запрос точно не дошёл, повтор безопасен;
- * - unknown  — соединение было, но ответ не получен (тайм-аут, обрыв): результат неизвестен,
- *              автоматический повтор может привести к дублю.
- */
-export type MaxErrorKind = "http" | "connect" | "unknown" | "config";
-
-export class MaxApiError extends Error {
-  constructor(
-    readonly kind: MaxErrorKind,
-    message: string,
-    readonly status: number | null = null,
-    readonly code: string | null = null,
-    readonly retryAfterMs: number | null = null,
-  ) {
-    super(message);
+/** Ошибка MAX API (виды — в src/lib/chat/errors.ts). */
+export class MaxApiError extends ChannelApiError {
+  constructor(...args: ConstructorParameters<typeof ChannelApiError>) {
+    super(...args);
     this.name = "MaxApiError";
   }
 
-  /** Повтор безопасен: запрос не дошёл до MAX или отклонён из-за лимита запросов. */
-  get retryable(): boolean {
-    return this.kind === "connect" || this.status === 429 || this.status === 503;
-  }
-
-  /** Короткое описание для журнала и админки (без секретов и персональных данных). */
   get summary(): string {
     if (this.kind === "http") return `MAX API ${this.status}${this.code ? ` ${this.code}` : ""}: ${this.message}`.slice(0, 300);
     return this.message.slice(0, 300);
@@ -180,20 +161,6 @@ export function setMaxTransport(next: MaxTransport | null): void {
 
 async function call<T>(options: CallOptions, config = getMaxConfig()): Promise<T> {
   return (await transport(config, options)) as T;
-}
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** Повтор только безопасных ошибок (запрос не дошёл или лимит), не более двух раз. */
-async function withSafeRetry<T>(fn: () => Promise<T>, delays = [1_000, 3_000]): Promise<T> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      if (!(error instanceof MaxApiError) || !error.retryable || attempt >= delays.length) throw error;
-      await sleep(Math.min(error.retryAfterMs ?? delays[attempt]!, 10_000));
-    }
-  }
 }
 
 export const maxUpdateTypes = ["bot_started", "bot_stopped", "message_created", "message_callback", "dialog_removed"] as const;

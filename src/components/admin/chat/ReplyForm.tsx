@@ -2,8 +2,8 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Loader2, Send } from "lucide-react";
-import { sendReply, type ReplyState } from "@/app/admin/max/actions";
-import { REPLY_MAX_LENGTH } from "@/lib/max/filters";
+import { sendReply, type ReplyState } from "@/app/admin/obrashcheniya/actions";
+import { REPLY_MAX_LENGTH } from "@/lib/chat/filters";
 import { ActionMessage } from "@/components/admin/RequestEditor";
 import { buttonClass } from "@/components/ui/Button";
 
@@ -15,7 +15,7 @@ const initial: ReplyState = { status: "idle" };
  * сообщение дважды. После обработки (в том числе с ошибкой) поле очищается — неотправленное
  * сообщение остаётся в истории, и его можно повторить оттуда.
  */
-export function ReplyForm({ clientId, disabledReason }: { clientId: string; disabledReason: string | null }) {
+export function ReplyForm({ clientId, channelLabel, disabledReason }: { clientId: string; channelLabel: string; disabledReason: string | null }) {
   const [state, action, pending] = useActionState(sendReply, initial);
   const [key, setKey] = useState(() => crypto.randomUUID());
   const [text, setText] = useState("");
@@ -52,14 +52,14 @@ export function ReplyForm({ clientId, disabledReason }: { clientId: string; disa
         className="block w-full resize-y rounded-[var(--radius-control)] border border-line-strong bg-white px-3.5 py-2.5 text-[0.9375rem] text-ink focus:border-dark focus:outline-none"
       />
       <p id="reply-hint" className="text-[0.8125rem] text-muted">
-        Сообщение уйдёт клиенту в MAX от имени бота. После отправки диалог переходит в режим оператора — бот перестаёт
+        Сообщение уйдёт клиенту в {channelLabel} от имени бота. После отправки диалог переходит в режим оператора — бот перестаёт
         отвечать автоматически. Не запрашивайте паспортные данные и платёжные реквизиты.
         <span className="ml-1 tabular-nums">{text.length}/{REPLY_MAX_LENGTH}</span>
       </p>
       <ActionMessage state={state} />
       <button type="submit" disabled={pending || !text.trim()} className={buttonClass("primary", "min-h-11 px-5")}>
         {pending ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Send aria-hidden="true" className="h-4 w-4" />}
-        Отправить в MAX
+        Отправить в {channelLabel}
       </button>
     </form>
   );

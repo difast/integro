@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { botTexts } from "@/config/max-bot";
-import { runScenario, type BotContext, type BotInput, type FlowState } from "@/lib/max/scenario";
+import { botTexts } from "@/config/chat-bot";
+import { runScenario, type BotContext, type BotInput, type FlowState } from "@/lib/chat/scenario";
 
 let counter = 0;
 const ctx = (hasConsent = false): BotContext => ({ hasConsent, newKey: () => `key-${++counter}` });
@@ -204,4 +204,57 @@ describe("чат-бот MAX: сценарий", () => {
     expect(r.submit).toBeUndefined();
     expect(r.state.step).toBe("menu");
   });
+
+  it("«Назад» возвращает на предыдущий шаг, с первого шага — отмена", () => {
+    const context = ctx(true);
+    const atDescription = run(
+      [
+        { type: "callback", payload: "apply" },
+        { type: "text", text: "Иван" },
+        { type: "callback", payload: "dir:ocenka" },
+      ],
+      context,
+    );
+    expect(atDescription.state.step).toBe("description");
+    const back = runScenario(atDescription.state, { type: "callback", payload: "back" }, context);
+    expect(back.state.step).toBe("direction");
+    expect(back.state.draft?.name).toBe("Иван");
+    const fromName = runScenario({ step: "name", draft: { key: "k" } }, { type: "callback", payload: "back" }, context);
+    expect(fromName.state.step).toBe("menu");
+  });
+
+  it("при исправлении поля «Назад» возвращает к проверке", () => {
+    const r = runScenario({ step: "phone", draft: { key: "k", name: "Иван", description: "Описание задачи" }, editing: true }, { type: "callback", payload: "back" }, ctx());
+    expect(r.state.step).toBe("confirm");
+  });
+
+  it("команды /help, /cancel и неизвестная команда", () => {
+    const help = runScenario({ step: "menu" }, { type: "text", text: "/help" }, ctx());
+    expect(help.replies[0]!.text).toBe(botTexts.help);
+    const cancel = runScenario({ step: "description", draft: { key: "k", name: "Иван" } }, { type: "text", text: "/cancel" }, ctx());
+    expect(cancel.state.step).toBe("menu");
+    expect(cancel.replies[0]!.text).toBe(botTexts.cancelled);
+    const unknown = runScenario({ step: "menu" }, { type: "text", text: "/price" }, ctx());
+    expect(unknown.replies[0]!.text).toContain(botTexts.unknownCommand);
+    expect(runScenario({ step: "menu" }, { type: "text", text: "/start@integro_bot" }, ctx()).replies[0]!.text).toBe(botTexts.greeting);
+  });
+
+  it("подпись кнопки, присланная текстом (обычная клавиатура Telegram), работает как нажатие", () => {
+    const state: FlowState = { step: "phone", draft: { key: "k", name: "Иван", description: "Описание задачи" } };
+    expect(runScenario(state, { type: "text", text: "Пропустить" }, ctx()).state.step).toBe("contact_time");
+    expect(runScenario(state, { type: "text", text: "Назад" }, ctx()).state.step).toBe("description");
+    expect(runScenario(state, { type: "text", text: "Отменить" }, ctx()).state.step).toBe("menu");
+  });
+
+  it("номер, присланный не на шаге телефона, сохраняется в заявке", () => {
+    const state: FlowState = { step: "contact_time", draft: { key: "k", name: "Иван", description: "Описание задачи" } };
+    const r = runScenario(state, { type: "contact", phone: "+79001112233" }, ctx());
+    expect(r.phone).toBe("+79001112233");
+    expect(r.state).toMatchObject({ step: "contact_time", draft: { phone: "+79001112233" } });
+  });
+
+  it("тексты не привязаны к одному мессенджеру", () => {
+    expect(JSON.stringify(botTexts)).not.toMatch(/MAX|Telegram/);
+  });
 });
+

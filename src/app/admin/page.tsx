@@ -182,8 +182,10 @@ export default async function AdminRequestsPage({ searchParams }: Props) {
                     <td className="px-5 py-3.5 whitespace-nowrap text-muted">{formatMoscowDateTime(item.createdAt)}</td>
                     <td className="px-5 py-3.5 font-medium text-ink">
                       {item.name}
-                      {item.channel === "max" ? (
-                        <span className="ml-2 rounded-full border border-line-strong px-2 py-0.5 text-[0.75rem] font-medium text-muted">MAX</span>
+                      {item.channel !== "site" ? (
+                        <span className="ml-2 rounded-full border border-line-strong px-2 py-0.5 text-[0.75rem] font-medium text-muted">
+                          {item.channel === "telegram" ? "Telegram" : "MAX"}
+                        </span>
                       ) : null}
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">{item.phone || "—"}</td>

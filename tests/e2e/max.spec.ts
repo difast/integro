@@ -40,11 +40,11 @@ async function login(page: Page) {
 test.beforeAll(async () => {
   await db.connect();
   for (let i = 0; i < 20; i++) {
-    const { rows } = await db.query("SELECT to_regclass('public.max_clients') AS t");
+    const { rows } = await db.query("SELECT to_regclass('public.chat_clients') AS t");
     if (rows[0].t) break;
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  await db.query("TRUNCATE max_messages, max_notes, max_events, max_clients RESTART IDENTITY CASCADE");
+  await db.query("TRUNCATE chat_messages, chat_notes, chat_events, chat_clients RESTART IDENTITY CASCADE");
 });
 
 test.afterAll(async () => {
@@ -67,7 +67,7 @@ test("Webhook: без секрета или с чужим секретом — 4
   await expect.poll(async () => (await sentTexts(request)).length).toBe(1);
   const texts = await sentTexts(request);
   expect(texts[0]).toContain("ООО «Интегро»");
-  const { rows } = await db.query("SELECT count(*)::int AS n FROM max_messages WHERE direction = 'in'");
+  const { rows } = await db.query("SELECT count(*)::int AS n FROM chat_messages WHERE direction = 'in'");
   expect(rows[0].n).toBe(1);
   // Токен — только в заголовке.
   const all = await mockRequests(request);
@@ -77,7 +77,7 @@ test("Webhook: без секрета или с чужим секретом — 4
 });
 
 test("без входа раздел MAX недоступен", async ({ page }) => {
-  for (const path of ["/admin/max", "/admin/max/nastroyki"]) {
+  for (const path of ["/admin/max", "/admin/max/nastroyki", "/admin/obrashcheniya", "/admin/obrashcheniya/nastroyki"]) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/admin\/vhod$/);
   }
@@ -88,8 +88,8 @@ test("оператор видит обращение, отвечает из ад
   await expect.poll(async () => (await sentTexts(request)).length).toBeGreaterThan(0);
 
   await login(page);
-  await page.getByRole("link", { name: "MAX — обращения" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("MAX — обращения");
+  await page.getByRole("link", { name: "Обращения", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Обращения из мессенджеров");
   const row = page.getByRole("link", { name: /Пётр Сидоров/ });
   await expect(row).toContainText(`ID ${user.user_id}`);
 
@@ -107,13 +107,13 @@ test("оператор видит обращение, отвечает из ад
   await request.post(`${E2E_MAX_MOCK}/__reset`);
   await page.getByLabel("Ответ клиенту").fill("Здравствуйте, Пётр! Пришлите, пожалуйста, номер дела.");
   await page.getByRole("button", { name: "Отправить в MAX" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Ответ отправлен в MAX" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "MAX подтвердил отправку" })).toBeVisible();
   await expect(page.getByLabel("Ответ клиенту")).toHaveValue("");
 
   const sent = (await mockRequests(request)).filter((r) => r.path === "/messages");
   expect(sent).toHaveLength(1);
   expect(sent[0]).toMatchObject({ method: "POST", query: { user_id: String(user.user_id) }, auth: E2E_MAX_TOKEN, body: { text: "Здравствуйте, Пётр! Пришлите, пожалуйста, номер дела." } });
-  await expect(dialog).toContainText("Отправлено в MAX");
+  await expect(dialog).toContainText("Отправлено, платформа подтвердила");
   await expect(page.getByText("Оператор: бот не отвечает автоматически")).toBeVisible();
 
   // В режиме оператора новое сообщение клиента появляется в карточке, бот молчит.
@@ -144,19 +144,22 @@ test("оператор видит обращение, отвечает из ад
 
 test("настройки: переменные без значений, проверка подключения и регистрация Webhook через API", async ({ page, request }) => {
   await login(page);
+  // Прежний адрес настроек MAX ведёт в общие настройки каналов.
   await page.goto("/admin/max/nastroyki");
-  await expect(page.getByText("MAX_BOT_TOKEN — задано")).toBeVisible();
-  await expect(page.getByText("MAX_WEBHOOK_SECRET — задано")).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/obrashcheniya\/nastroyki$/);
+  const section = page.getByRole("region", { name: "MAX" });
+  await expect(section.getByText("MAX_BOT_TOKEN — задано")).toBeVisible();
+  await expect(section.getByText("MAX_WEBHOOK_SECRET — задано")).toBeVisible();
   const html = await page.content();
   expect(html).not.toContain(E2E_MAX_TOKEN);
   expect(html).not.toContain(E2E_MAX_SECRET);
 
-  await page.getByRole("button", { name: "Проверить подключение" }).click();
-  await expect(page.getByText("Соединение с MAX API установлено")).toBeVisible();
-  await expect(page.getByText(/@id9734021152_bot/)).toBeVisible();
+  await section.getByRole("button", { name: "Проверить подключение" }).click();
+  await expect(section.getByText("Соединение с MAX API установлено")).toBeVisible();
+  await expect(section.getByText(/@id9734021152_bot/)).toBeVisible();
 
-  await page.getByRole("button", { name: "Зарегистрировать Webhook" }).click();
-  await expect(page.getByText(/Webhook зарегистрирован/)).toBeVisible();
+  await section.getByRole("button", { name: "Зарегистрировать Webhook" }).click();
+  await expect(section.getByText(/Webhook зарегистрирован/)).toBeVisible();
   const subscribe = (await mockRequests(request)).find((r) => r.method === "POST" && r.path === "/subscriptions");
   expect(subscribe?.body).toEqual({
     url: "https://intsoftholding.ru/api/max/webhook",

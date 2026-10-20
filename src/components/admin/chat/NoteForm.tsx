@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
-import { addNote } from "@/app/admin/max/actions";
+import { addNote } from "@/app/admin/obrashcheniya/actions";
 import type { ActionState } from "@/app/admin/actions";
 import { ActionMessage } from "@/components/admin/RequestEditor";
 import { buttonClass } from "@/components/ui/Button";

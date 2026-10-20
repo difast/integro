@@ -1,12 +1,12 @@
+import type { AttachmentMeta, BotButton, ChatUser, IncomingEvent } from "@/lib/chat/types";
+
 /**
  * Типы MAX Bot API, которые использует сайт (подмножество официальной спецификации),
- * и разбор входящих событий в нормализованный вид. Модуль без зависимостей от сервера.
+ * и разбор входящих событий в общий вид (src/lib/chat/types.ts). Модуль без зависимостей от сервера.
  */
 
-export type MaxButton =
-  | { type: "callback"; text: string; payload: string }
-  | { type: "link"; text: string; url: string }
-  | { type: "request_contact"; text: string };
+/** Кнопки MAX совпадают с общим видом: callback, link, request_contact. */
+export type MaxButton = BotButton;
 
 export type MaxUser = {
   user_id: number;
@@ -26,34 +26,17 @@ type MaxMessage = {
   body?: { mid?: string; text?: string | null; attachments?: MaxAttachment[] | null } | null;
 };
 
-/** Сведения о вложении, которые сохраняются: тип и метаданные, без ссылок на файлы и токенов. */
-export type AttachmentMeta = { type: string; filename?: string; size?: number };
+export type { AttachmentMeta, IncomingEvent };
 
-export type IncomingEvent =
-  | { kind: "start"; user: MaxUser; chatId: number | null; payload: string | null; time: Date; key: string }
-  | { kind: "stop"; user: MaxUser; chatId: number | null; time: Date; key: string; updateType: "bot_stopped" | "dialog_removed" }
-  | {
-      kind: "message";
-      user: MaxUser;
-      chatId: number | null;
-      mid: string | null;
-      text: string;
-      attachments: AttachmentMeta[];
-      contactPhone: string | null;
-      time: Date;
-      key: string;
-    }
-  | {
-      kind: "callback";
-      user: MaxUser;
-      chatId: number | null;
-      callbackId: string;
-      payload: string;
-      sourceText: string | null;
-      time: Date;
-      key: string;
-    }
-  | { kind: "ignored"; reason: string; updateType: string; userId: number | null; time: Date | null; key: string };
+function toChatUser(user: MaxUser): ChatUser {
+  return {
+    id: user.user_id,
+    firstName: (user.first_name ?? user.name ?? "").slice(0, 200),
+    lastName: (user.last_name ?? "").slice(0, 200),
+    username: user.username ? user.username.slice(0, 200) : null,
+    isBot: Boolean(user.is_bot),
+  };
+}
 
 const MAX_TEXT = 4000;
 
@@ -113,9 +96,9 @@ export function parseUpdate(raw: unknown): IncomingEvent | null {
     const key = fallbackKey(type, user.user_id, update.timestamp);
     if (type === "bot_started") {
       const payload = typeof update.payload === "string" && update.payload ? update.payload.slice(0, 200) : null;
-      return { kind: "start", user, chatId, payload, time, key };
+      return { kind: "start", user: toChatUser(user), chatId, payload, time, key };
     }
-    return { kind: "stop", user, chatId, time, key, updateType: type };
+    return { kind: "stop", user: toChatUser(user), chatId, time, key, reason: type === "bot_stopped" ? "stopped" : "removed" };
   }
 
   if (type === "message_created") {
@@ -132,9 +115,10 @@ export function parseUpdate(raw: unknown): IncomingEvent | null {
     const { items, contactPhone } = attachmentMeta(message?.body?.attachments);
     return {
       kind: "message",
-      user: sender,
+      user: toChatUser(sender),
       chatId: message?.recipient?.chat_id ?? null,
-      mid,
+      messageKey: mid,
+      messageId: mid,
       text: (message?.body?.text ?? "").slice(0, MAX_TEXT),
       attachments: items,
       contactPhone,
@@ -156,11 +140,12 @@ export function parseUpdate(raw: unknown): IncomingEvent | null {
     }
     return {
       kind: "callback",
-      user,
+      user: toChatUser(user),
       chatId: message?.recipient?.chat_id ?? null,
       callbackId,
       payload: typeof callback?.payload === "string" ? callback.payload.slice(0, 200) : "",
       sourceText: typeof message?.body?.text === "string" ? message.body.text.slice(0, MAX_TEXT) : null,
+      sourceMessageId: typeof message?.body?.mid === "string" ? message.body.mid.slice(0, 200) : null,
       time,
       key,
     };
@@ -174,4 +159,10 @@ export function parseUpdate(raw: unknown): IncomingEvent | null {
 export function maxDisplayName(user: { first_name?: string | null; last_name?: string | null; username?: string | null; name?: string | null }): string {
   const full = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
   return full || user.name?.trim() || (user.username ? `@${user.username}` : "");
+}
+
+/** Тип события MAX для журнала. */
+export function maxUpdateType(raw: unknown): string {
+  const type = raw && typeof raw === "object" ? (raw as { update_type?: unknown }).update_type : null;
+  return typeof type === "string" ? type.slice(0, 64) : "unknown";
 }

@@ -285,3 +285,15 @@ DNS). Поэтому положения сверены по поисковым �
 - Переменные: `MAX_BOT_TOKEN`, `MAX_WEBHOOK_SECRET`, `MAX_WEBHOOK_URL` (необязательно), `MAX_API_CA_CERT` (необязательно).
 - Тесты: `tests/unit/max-scenario.test.ts`, `tests/unit/max-api.test.ts`, `tests/integration/max-db.test.ts`, `tests/e2e/max.spec.ts` с имитацией MAX API (`tests/e2e/max-mock-server.mjs`).
 - Не проверено на реальном MAX API (нет токена и доступа к доменам MAX из среды разработки) — порядок проверки в `MAX_INTEGRATION.md`, раздел 4.
+
+## 13. Дополнение 20.10.2026: Telegram-бот и общая система обращений
+
+Подробно — `TELEGRAM_INTEGRATION.md`; правовые вопросы — `LEGAL_REVIEW.md`, п. 4.11.
+
+- Общая система обращений: таблицы MAX стали общими (`chat_clients`, `chat_messages`, `chat_notes`, `chat_events`, миграция `005_chat_channels`, данные сохранены), общие сценарий (`src/lib/chat/scenario.ts`), тексты (`src/config/chat-bot.ts`), обработка и очередь отправки (`src/lib/chat/processor.ts`), Webhook (`src/lib/chat/webhook.ts`); каналы — адаптеры (`src/lib/max/adapter.ts`, `src/lib/telegram/adapter.ts`).
+- Telegram: Webhook `POST /api/telegram/webhook` (секрет `X-Telegram-Bot-Api-Secret-Token`, ключ события `tg:<update_id>`), `setWebhook` с `allowed_updates` = message, callback_query, my_chat_member; /start (с меткой), /help, /cancel; inline-меню; заявка с `request_contact`, «Назад», «Пропустить», исправлением и подтверждением; блокировка/разблокировка бота; неподдерживаемые форматы — вежливый ответ.
+- Сценарий дополнен для обоих каналов: «Назад» на шагах заявки, /help, /cancel, неизвестные команды, вопрос о документах; порог автоответов — 30 в минуту.
+- Админка: единый раздел «Обращения» (`/admin/obrashcheniya`) с фильтром по каналу, значком канала, username; ручная связь карточек одного человека из разных каналов; «Настройки каналов» с блоками Telegram и MAX. Прежние адреса `/admin/max…` перенаправляют сюда.
+- Переменные: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_URL` (необязательно), `TELEGRAM_BOT_USERNAME` (необязательно).
+- Тесты: `tests/unit/telegram.test.ts`, `tests/unit/chat-scenario.test.ts`, `tests/integration/telegram-db.test.ts`, `tests/integration/chat-db.test.ts` (регресс MAX), `tests/e2e/telegram.spec.ts` с имитацией Bot API (`tests/e2e/telegram-mock-server.mjs`), `tests/e2e/max.spec.ts`.
+- Не проверено на реальном Telegram Bot API (нет токена и доступа к api.telegram.org из среды разработки) — порядок проверки в `TELEGRAM_INTEGRATION.md`, раздел 4.

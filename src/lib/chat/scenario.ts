@@ -1,10 +1,10 @@
-import { botButtons, botDirections, botKeywords, botTexts } from "@/config/max-bot";
+import { botButtons, botDirections, botKeywords, botTexts } from "@/config/chat-bot";
 import { isValidPhone, limits } from "@/lib/request-form";
-import type { MaxButton } from "./types";
+import type { BotButton } from "./types";
 
 /**
  * Сценарий чат-бота: чистая функция «состояние диалога + ввод клиента → ответы и действия».
- * Ничего не отправляет и не сохраняет — это делает src/lib/max/processor.ts.
+ * Общая для всех каналов. Ничего не отправляет и не сохраняет — это делает src/lib/chat/processor.ts.
  */
 
 export type Step =
@@ -38,7 +38,7 @@ export type BotInput =
   | { type: "contact"; phone: string | null }
   | { type: "attachment" };
 
-export type BotReply = { text: string; buttons?: MaxButton[][] };
+export type BotReply = { text: string; buttons?: BotButton[][]; removeKeyboard?: boolean };
 
 export type BotResult = {
   state: FlowState;
@@ -61,39 +61,43 @@ export type BotContext = {
 
 const CONTACT_TIME_MAX = 200;
 
-const cb = (text: string, payload: string): MaxButton => ({ type: "callback", text, payload });
+const cb = (text: string, payload: string): BotButton => ({ type: "callback", text, payload });
 
 export const keyboards = {
-  menu: (): MaxButton[][] => [
+  menu: (): BotButton[][] => [
     [cb(botButtons.ocenka, "sec:ocenka")],
     [cb(botButtons.sudeb, "sec:sudeb")],
     [cb(botButtons.issled, "sec:issled")],
     [cb(botButtons.apply, "apply")],
     [cb(botButtons.specialist, "specialist")],
   ],
-  section: (extra: MaxButton[] = []): MaxButton[][] => [
+  section: (extra: BotButton[] = []): BotButton[][] => [
     ...extra.map((button) => [button]),
     [cb(botButtons.apply, "apply")],
     [cb(botButtons.specialist, "specialist")],
     [cb(botButtons.menu, "menu")],
   ],
-  afterSpecialist: (): MaxButton[][] => [[cb(botButtons.apply, "apply")], [cb(botButtons.menu, "menu")]],
-  unknown: (): MaxButton[][] => [[cb(botButtons.specialist, "specialist")], [cb(botButtons.menu, "menu")]],
-  consent: (): MaxButton[][] => [[cb(botButtons.consentYes, "consent:yes")], [cb(botButtons.cancel, "cancel")]],
-  cancel: (): MaxButton[][] => [[cb(botButtons.cancel, "cancel")]],
-  direction: (): MaxButton[][] => [...botDirections.map((d) => [cb(d.label, `dir:${d.payload}`)]), [cb(botButtons.cancel, "cancel")]],
-  phone: (): MaxButton[][] => [
+  afterSpecialist: (): BotButton[][] => [[cb(botButtons.apply, "apply")], [cb(botButtons.menu, "menu")]],
+  unknown: (): BotButton[][] => [[cb(botButtons.specialist, "specialist")], [cb(botButtons.menu, "menu")]],
+  consent: (): BotButton[][] => [[cb(botButtons.consentYes, "consent:yes")], [cb(botButtons.cancel, "cancel")]],
+  cancel: (): BotButton[][] => [[cb(botButtons.cancel, "cancel")]],
+  backCancel: (): BotButton[][] => [[cb(botButtons.back, "back"), cb(botButtons.cancel, "cancel")]],
+  direction: (): BotButton[][] => [
+    ...botDirections.map((d) => [cb(d.label, `dir:${d.payload}`)]),
+    [cb(botButtons.back, "back"), cb(botButtons.cancel, "cancel")],
+  ],
+  phone: (): BotButton[][] => [
     [{ type: "request_contact", text: botButtons.shareContact }],
     [cb(botButtons.skip, "skip")],
-    [cb(botButtons.cancel, "cancel")],
+    [cb(botButtons.back, "back"), cb(botButtons.cancel, "cancel")],
   ],
-  skip: (): MaxButton[][] => [[cb(botButtons.skip, "skip")], [cb(botButtons.cancel, "cancel")]],
-  confirm: (): MaxButton[][] => [
+  skip: (): BotButton[][] => [[cb(botButtons.skip, "skip")], [cb(botButtons.back, "back"), cb(botButtons.cancel, "cancel")]],
+  confirm: (): BotButton[][] => [
     [cb(botButtons.confirm, "confirm")],
     [cb(botButtons.edit, "edit")],
     [cb(botButtons.cancel, "cancel")],
   ],
-  edit: (): MaxButton[][] => [
+  edit: (): BotButton[][] => [
     [cb(botButtons.editName, "edit:name"), cb(botButtons.editDirection, "edit:direction")],
     [cb(botButtons.editDescription, "edit:description"), cb(botButtons.editPhone, "edit:phone")],
     [cb(botButtons.editContactTime, "edit:contact_time")],
@@ -128,7 +132,7 @@ function prompt(state: FlowState): BotReply {
     case "direction":
       return { text: botTexts.askDirection, buttons: keyboards.direction() };
     case "description":
-      return { text: botTexts.askDescription, buttons: keyboards.cancel() };
+      return { text: botTexts.askDescription, buttons: keyboards.backCancel() };
     case "phone":
       return { text: botTexts.askPhone, buttons: keyboards.phone() };
     case "contact_time":
@@ -258,6 +262,20 @@ function handleCallback(payload: string, state: FlowState, context: BotContext):
 
   // Кнопки шагов заявки — действуют только на своём шаге.
   if (!draft) return stale();
+  if (payload === "back" && isApplicationStep(state.step)) {
+    const previous: Partial<Record<Step, Step>> = {
+      direction: "name",
+      description: "direction",
+      phone: "description",
+      contact_time: "phone",
+      confirm: "contact_time",
+      edit: "confirm",
+    };
+    const target = state.editing && state.step !== "edit" ? "confirm" : previous[state.step];
+    if (!target) return { state: { step: "menu" }, replies: [{ text: botTexts.cancelled }, menuReply()] };
+    const next: FlowState = { step: target, draft };
+    return { state: next, replies: [prompt(next)] };
+  }
   if (payload === "consent:yes" && state.step === "consent") {
     const next: FlowState = { step: "name", draft };
     return { state: next, replies: [prompt(next)], consentGiven: true };
@@ -314,6 +332,10 @@ export function runScenario(stateRaw: unknown, input: BotInput, context: BotCont
       return { ...result, phone: input.phone };
     }
     if (state.step === "phone") return { state, replies: [{ text: botTexts.errors.phone }, prompt(state)] };
+    // Номер прислан не на своём шаге (например, кнопкой, оставшейся на экране): сохраняем и продолжаем.
+    if (isApplicationStep(state.step) && state.draft && input.phone) {
+      return { state: { ...state, draft: { ...state.draft, phone: input.phone } }, replies: [prompt(state)], phone: input.phone };
+    }
     return freeText("", state, context);
   }
 
@@ -325,8 +347,21 @@ export function runScenario(stateRaw: unknown, input: BotInput, context: BotCont
 
   const text = input.text.trim();
   const lower = text.toLowerCase();
+
+  // Команды. «/start» и «меню» — ниже, вместе с ключевыми словами меню.
+  const command = /^\/([a-z_]+)(?:@\w+)?(?:\s|$)/i.exec(text)?.[1]?.toLowerCase();
+  if (command === "help") return { state, replies: [{ text: botTexts.help }, prompt(state)] };
+  if (command === "cancel") return handleCallback("cancel", state, context);
+  if (command && command !== "start") return { state, replies: [{ text: `${botTexts.unknownCommand}\n\n${botTexts.help}` }, prompt(state)] };
+
+  // Нажатие кнопки обычной клавиатуры (Telegram) приходит текстом с подписью кнопки.
+  const pressed = prompt(state)
+    .buttons?.flat()
+    .find((button): button is Extract<BotButton, { type: "callback" }> => button.type === "callback" && button.text.toLowerCase() === lower);
+  if (pressed && isApplicationStep(state.step)) return handleCallback(pressed.payload, state, context);
+
   // Команды меню действуют везде, в том числе посреди заявки.
-  if (botKeywords.menu.includes(lower as (typeof botKeywords.menu)[number])) {
+  if (command === "start" || botKeywords.menu.includes(lower as (typeof botKeywords.menu)[number])) {
     const replies = isApplicationStep(state.step) ? [{ text: botTexts.cancelled }, menuReply()] : [menuReply(botTexts.greeting)];
     return { state: { step: "menu" }, replies };
   }

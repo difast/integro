@@ -159,4 +159,48 @@ export const migrations: Migration[] = [
       CREATE INDEX requests_max_client_idx ON requests (max_client_id) WHERE max_client_id IS NOT NULL;
     `,
   },
+  {
+    // Общая система обращений из мессенджеров: таблицы чат-бота MAX становятся общими для всех
+    // каналов (MAX, Telegram). Данные сохраняются; у каждой записи — канал и внешний идентификатор.
+    // Клиент однозначно определяется парой (канал, ID пользователя в канале); имя и username для
+    // связи не используются. person_id — ручная связь карточек одного человека из разных каналов.
+    id: "005_chat_channels",
+    sql: `
+      ALTER TABLE max_clients RENAME TO chat_clients;
+      ALTER TABLE chat_clients ADD COLUMN channel text NOT NULL DEFAULT 'max' CHECK (channel IN ('max', 'telegram'));
+      ALTER TABLE chat_clients ALTER COLUMN channel DROP DEFAULT;
+      ALTER TABLE chat_clients RENAME COLUMN max_user_id TO external_user_id;
+      ALTER TABLE chat_clients DROP CONSTRAINT max_clients_max_user_id_key;
+      ALTER TABLE chat_clients ADD CONSTRAINT chat_clients_channel_user_key UNIQUE (channel, external_user_id);
+      ALTER TABLE chat_clients ADD COLUMN person_id uuid;
+      CREATE INDEX chat_clients_person_idx ON chat_clients (person_id) WHERE person_id IS NOT NULL;
+      ALTER INDEX max_clients_activity_idx RENAME TO chat_clients_activity_idx;
+      ALTER INDEX max_clients_status_idx RENAME TO chat_clients_status_idx;
+      ALTER INDEX max_clients_phone_digits_idx RENAME TO chat_clients_phone_digits_idx;
+      CREATE INDEX chat_clients_channel_idx ON chat_clients (channel, last_seen_at DESC);
+
+      ALTER TABLE max_events RENAME TO chat_events;
+      ALTER TABLE chat_events ADD COLUMN channel text NOT NULL DEFAULT 'max' CHECK (channel IN ('max', 'telegram'));
+      ALTER TABLE chat_events ALTER COLUMN channel DROP DEFAULT;
+      ALTER TABLE chat_events RENAME COLUMN max_user_id TO external_user_id;
+      ALTER INDEX max_events_queue_idx RENAME TO chat_events_queue_idx;
+
+      ALTER TABLE max_messages RENAME TO chat_messages;
+      -- Внешние идентификаторы сообщения: ID сообщения в канале, чат и пользователь.
+      ALTER TABLE chat_messages ADD COLUMN external_message_id text CHECK (char_length(external_message_id) <= 200);
+      ALTER TABLE chat_messages ADD COLUMN external_chat_id bigint;
+      ALTER TABLE chat_messages ADD COLUMN external_user_id bigint;
+      UPDATE chat_messages SET external_message_id = external_mid WHERE external_mid IS NOT NULL;
+      ALTER INDEX max_messages_client_idx RENAME TO chat_messages_client_idx;
+      ALTER INDEX max_messages_outbox_idx RENAME TO chat_messages_outbox_idx;
+
+      ALTER TABLE max_notes RENAME TO chat_notes;
+      ALTER INDEX max_notes_client_idx RENAME TO chat_notes_client_idx;
+
+      ALTER TABLE requests RENAME COLUMN max_client_id TO chat_client_id;
+      ALTER INDEX requests_max_client_idx RENAME TO requests_chat_client_idx;
+      ALTER TABLE requests DROP CONSTRAINT requests_channel_check;
+      ALTER TABLE requests ADD CONSTRAINT requests_channel_check CHECK (channel IN ('site', 'max', 'telegram'));
+    `,
+  },
 ];

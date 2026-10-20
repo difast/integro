@@ -7,8 +7,8 @@ const suite = url ? describe : describe.skip;
 
 type Db = typeof import("@/lib/db");
 type Api = typeof import("@/lib/max/api");
-type Processor = typeof import("@/lib/max/processor");
-type Repo = typeof import("@/lib/max/repository");
+type Processor = typeof import("@/lib/chat/processor");
+type Repo = typeof import("@/lib/chat/repository");
 let db: Db;
 let api: Api;
 let processor: Processor;
@@ -45,23 +45,23 @@ function started() {
 }
 
 async function deliver(update: unknown) {
-  const stored = await processor.storeEvent(update);
+  const stored = await processor.storeEvent("max", update);
   if (stored && !stored.duplicate) await processor.processEvent(stored.id);
   return stored;
 }
 
 const sent = () => calls.filter((c) => c.path === "messages");
-const clientRow = async () => (await db.query<Record<string, unknown>>("SELECT * FROM max_clients WHERE max_user_id = $1", [user.user_id]))[0]!;
+const clientRow = async () => (await db.query<Record<string, unknown>>("SELECT * FROM chat_clients WHERE channel = 'max' AND external_user_id = $1", [user.user_id]))[0]!;
 
-suite("чат-бот MAX и база", () => {
+suite("чат-бот MAX и база (общая система обращений)", () => {
   beforeAll(async () => {
     process.env.DATABASE_URL = url;
     process.env.MAX_BOT_TOKEN = "integration-token";
     process.env.MAX_WEBHOOK_SECRET = "s".repeat(40);
     db = await import("@/lib/db");
     api = await import("@/lib/max/api");
-    processor = await import("@/lib/max/processor");
-    repo = await import("@/lib/max/repository");
+    processor = await import("@/lib/chat/processor");
+    repo = await import("@/lib/chat/repository");
     await db.ensureSchema();
     api.setMaxTransport(async (_config, options) => {
       calls.push({ method: options.method, path: options.path, query: options.query, body: options.body });
@@ -80,7 +80,7 @@ suite("чат-бот MAX и база", () => {
   beforeEach(async () => {
     calls = [];
     failNext = null;
-    await db.query("TRUNCATE max_messages, max_notes, max_events, requests, max_clients RESTART IDENTITY CASCADE");
+    await db.query("TRUNCATE chat_messages, chat_notes, chat_events, requests, chat_clients RESTART IDENTITY CASCADE");
   });
 
   afterAll(async () => {
@@ -97,7 +97,7 @@ suite("чат-бот MAX и база", () => {
     expect(sent()[0]!.query).toEqual({ user_id: user.user_id });
     expect((sent()[0]!.body as { text: string }).text).toContain("ООО «Интегро»");
     const messages = await db.query<{ direction: string; status: string; external_mid: string | null }>(
-      "SELECT direction, status, external_mid FROM max_messages ORDER BY id",
+      "SELECT direction, status, external_mid FROM chat_messages ORDER BY id",
     );
     expect(messages).toEqual([
       { direction: "in", status: "received", external_mid: null },
@@ -113,7 +113,7 @@ suite("чат-бот MAX и база", () => {
     expect(second?.duplicate).toBe(true);
     await processor.processEvent(first!.id); // повторная обработка того же события — ничего не делает
     expect(sent()).toHaveLength(1);
-    expect((await db.query("SELECT id FROM max_messages WHERE direction = 'in'")).length).toBe(1);
+    expect((await db.query("SELECT id FROM chat_messages WHERE direction = 'in'")).length).toBe(1);
   });
 
   it("повторное обращение — та же карточка (связь по ID пользователя MAX, а не по имени)", async () => {
@@ -121,7 +121,7 @@ suite("чат-бот MAX и база", () => {
     user.first_name = "Анна-Мария";
     await deliver(message("меню"));
     user.first_name = "Анна";
-    const clients = await db.query<{ first_name: string }>("SELECT first_name FROM max_clients");
+    const clients = await db.query<{ first_name: string }>("SELECT first_name FROM chat_clients");
     expect(clients).toEqual([{ first_name: "Анна-Мария" }]);
   });
 
@@ -151,19 +151,19 @@ suite("чат-бот MAX и база", () => {
       status: "new",
     });
     const client = await clientRow();
-    expect(requests[0]!.max_client_id).toBe(client.id);
+    expect(requests[0]!.chat_client_id).toBe(client.id);
     expect(client).toMatchObject({ phone: "+7 900 123-45-67", needs_reply: true });
     expect(client.consent_at).toBeTruthy();
     const number = processor.requestNumber(String(requests[0]!.id));
     expect(sent().some((c) => (c.body as { text: string }).text.includes(`Заявка № ${number} принята`))).toBe(true);
-    expect(await repo.getMaxClient(String(client.id))).toMatchObject({ requestCount: 1 });
+    expect(await repo.getChatClient(String(client.id))).toMatchObject({ requestCount: 1 });
   });
 
   it("режим оператора: бот молчит, диалог ждёт ответа; ответ оператора уходит в MAX один раз", async () => {
     await deliver(started());
     const client = await clientRow();
     const id = String(client.id);
-    await repo.updateMaxClient(id, { mode: "operator" });
+    await repo.updateChatClient(id, { mode: "operator" });
     calls = [];
     await deliver(message("Есть вопрос по экспертизе"));
     expect(sent()).toHaveLength(0);
@@ -179,7 +179,7 @@ suite("чат-бот MAX и база", () => {
     expect(await clientRow()).toMatchObject({ needs_reply: false, mode: "operator" });
 
     // Возврат боту: снова отвечает по сценарию с главного меню.
-    await repo.updateMaxClient(id, { mode: "bot" });
+    await repo.updateChatClient(id, { mode: "bot" });
     calls = [];
     await deliver(message("меню"));
     expect(sent()).toHaveLength(1);
@@ -204,22 +204,22 @@ suite("чат-бот MAX и база", () => {
     const failed = await repo.sendOperatorReply(id, "Первый ответ", randomUUID());
     expect(failed.status).toBe("failed");
     expect(failed.error).toContain("404");
-    expect(await repo.retryMaxMessage(id, failed.messageId!, false)).toMatchObject({ status: "sent" });
+    expect(await repo.retryChatMessage(id, failed.messageId!, false)).toMatchObject({ status: "sent" });
 
     failNext = "unknown";
     const unknown = await repo.sendOperatorReply(id, "Второй ответ", randomUUID());
     expect(unknown.status).toBe("unknown");
-    expect(await repo.retryMaxMessage(id, unknown.messageId!, false)).toMatchObject({ status: "skipped" });
-    expect(await repo.retryMaxMessage(id, unknown.messageId!, true)).toMatchObject({ status: "sent" });
+    expect(await repo.retryChatMessage(id, unknown.messageId!, false)).toMatchObject({ status: "skipped" });
+    expect(await repo.retryChatMessage(id, unknown.messageId!, true)).toMatchObject({ status: "sent" });
 
     // Уже отправленное сообщение повторно не отправляется.
-    expect(await repo.retryMaxMessage(id, unknown.messageId!, true)).toMatchObject({ status: "skipped" });
+    expect(await repo.retryChatMessage(id, unknown.messageId!, true)).toMatchObject({ status: "skipped" });
   });
 
   it("единичный сбой соединения при автоответе повторяется автоматически", async () => {
     failNext = "connect";
     await deliver(started());
-    const rows = await db.query<{ status: string }>("SELECT status FROM max_messages WHERE direction = 'out'");
+    const rows = await db.query<{ status: string }>("SELECT status FROM chat_messages WHERE direction = 'out'");
     expect(rows[0]!.status).toBe("sent"); // после одного сбоя соединения повтор прошёл
   });
 
@@ -241,18 +241,18 @@ suite("чат-бот MAX и база", () => {
     await deliver(started());
     const client = await clientRow();
     await db.query(
-      `INSERT INTO max_messages (client_id, direction, author, kind, text, status, created_at)
+      `INSERT INTO chat_messages (client_id, direction, author, kind, text, status, created_at)
        VALUES ($1, 'out', 'bot', 'text', 'Повисшее сообщение', 'pending', now() - interval '5 minutes')`,
       [client.id],
     );
     await db.query(
-      `INSERT INTO max_messages (client_id, direction, author, kind, text, status, claimed_at)
+      `INSERT INTO chat_messages (client_id, direction, author, kind, text, status, claimed_at)
        VALUES ($1, 'out', 'operator', 'text', 'Прерванная отправка', 'sending', now() - interval '5 minutes')`,
       [client.id],
     );
     calls = [];
-    await processor.sweepMax();
-    const rows = await db.query<{ text: string; status: string }>("SELECT text, status FROM max_messages WHERE text IN ('Повисшее сообщение', 'Прерванная отправка') ORDER BY id");
+    await processor.sweepChats();
+    const rows = await db.query<{ text: string; status: string }>("SELECT text, status FROM chat_messages WHERE text IN ('Повисшее сообщение', 'Прерванная отправка') ORDER BY id");
     expect(rows).toEqual([
       { text: "Повисшее сообщение", status: "sent" },
       { text: "Прерванная отправка", status: "unknown" },
@@ -263,29 +263,29 @@ suite("чат-бот MAX и база", () => {
     await deliver(started());
     await deliver(message("Нужна рецензия на заключение эксперта"));
     await deliver(callback("specialist"));
-    const base = { filter: "" as const, period: "" as const, page: 1 };
-    expect((await repo.listMaxClients({ ...base, q: "анна" })).total).toBe(1);
-    expect((await repo.listMaxClients({ ...base, q: String(user.user_id) })).total).toBe(1);
-    expect((await repo.listMaxClients({ ...base, q: "рецензия" })).total).toBe(1);
-    expect((await repo.listMaxClients({ ...base, q: "нет-такого" })).total).toBe(0);
-    expect((await repo.listMaxClients({ ...base, q: "", filter: "needs_reply" })).total).toBe(1);
-    expect((await repo.listMaxClients({ ...base, q: "%" })).total).toBe(0);
-    const { items } = await repo.listMaxMessages(String((await clientRow()).id));
+    const base = { filter: "" as const, period: "" as const, channel: "" as const, page: 1 };
+    expect((await repo.listChatClients({ ...base, q: "анна" })).total).toBe(1);
+    expect((await repo.listChatClients({ ...base, q: String(user.user_id) })).total).toBe(1);
+    expect((await repo.listChatClients({ ...base, q: "рецензия" })).total).toBe(1);
+    expect((await repo.listChatClients({ ...base, q: "нет-такого" })).total).toBe(0);
+    expect((await repo.listChatClients({ ...base, q: "", filter: "needs_reply" })).total).toBe(1);
+    expect((await repo.listChatClients({ ...base, q: "%" })).total).toBe(0);
+    const { items } = await repo.listChatMessages(String((await clientRow()).id));
     expect(items.map((m) => m.direction)).toContain("in");
   });
 
   it("удаление карточки удаляет переписку, заявки остаются", async () => {
     await deliver(started());
     const id = String((await clientRow()).id);
-    await repo.addMaxNote(id, "Внутренняя заметка");
+    await repo.addChatNote(id, "Внутренняя заметка");
     await db.query(
-      `INSERT INTO requests (submission_key, name, service_title, message, consent_revision, channel, max_client_id)
+      `INSERT INTO requests (submission_key, name, service_title, message, consent_revision, channel, chat_client_id)
        VALUES ($1, 'Анна', 'Не выбрано', 'Текст заявки для теста', '19.10.2026', 'max', $2)`,
       [randomUUID(), id],
     );
-    await repo.deleteMaxClient(id);
-    expect((await db.query("SELECT id FROM max_messages")).length).toBe(0);
-    expect((await db.query("SELECT id FROM max_notes")).length).toBe(0);
-    expect(await db.query("SELECT max_client_id FROM requests")).toEqual([{ max_client_id: null }]);
+    await repo.deleteChatClient(id);
+    expect((await db.query("SELECT id FROM chat_messages")).length).toBe(0);
+    expect((await db.query("SELECT id FROM chat_notes")).length).toBe(0);
+    expect(await db.query("SELECT chat_client_id FROM requests")).toEqual([{ chat_client_id: null }]);
   });
 });

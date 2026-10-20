@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { Bot, CheckCheck, CircleDot, Headset, Lock, LockOpen } from "lucide-react";
-import { updateDialog } from "@/app/admin/max/actions";
+import { updateDialog } from "@/app/admin/obrashcheniya/actions";
 import type { ActionState } from "@/app/admin/actions";
 import { ActionMessage } from "@/components/admin/RequestEditor";
 

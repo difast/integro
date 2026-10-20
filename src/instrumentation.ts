@@ -28,16 +28,18 @@ export async function register() {
     console.error("[db] database is unavailable:", describeDbError(error));
   }
 
-  // Чат-бот MAX: состояние настройки (без токена и секрета) и фоновая досылка раз в минуту.
+  // Чат-боты MAX и Telegram: состояние настройки (без токенов и секретов) и фоновая досылка раз в минуту.
   const { getMaxConfig, isMaxEnabled, maxProblemText } = await import("@/lib/max/config");
+  const { getTelegramConfig, isTelegramEnabled, telegramProblemText } = await import("@/lib/telegram/config");
   const max = getMaxConfig();
-  if (!isMaxEnabled(max)) {
-    const reasons = max.problems.filter((p) => p !== "webhook_url_missing" && p !== "webhook_url_invalid");
-    console.info(`[max] chat bot off: ${reasons.map((p) => maxProblemText[p]).join(" ")}`);
-    return;
-  }
-  console.info(`[max] chat bot on, webhook ${max.webhookUrl ?? "(MAX_WEBHOOK_URL is not set)"}`);
-  const { sweepMax } = await import("@/lib/max/processor");
-  const timer = setInterval(() => void sweepMax(), 60_000);
+  const telegram = getTelegramConfig();
+  const urlProblem = (p: string) => p === "webhook_url_missing" || p === "webhook_url_invalid";
+  if (isMaxEnabled(max)) console.info(`[max] chat bot on, webhook ${max.webhookUrl ?? "(MAX_WEBHOOK_URL is not set)"}`);
+  else console.info(`[max] chat bot off: ${max.problems.filter((p) => !urlProblem(p)).map((p) => maxProblemText[p]).join(" ")}`);
+  if (isTelegramEnabled(telegram)) console.info(`[telegram] bot on, webhook ${telegram.webhookUrl ?? "(TELEGRAM_WEBHOOK_URL is not set)"}`);
+  else console.info(`[telegram] bot off: ${telegram.problems.filter((p) => !urlProblem(p)).map((p) => telegramProblemText[p]).join(" ")}`);
+  if (!isMaxEnabled(max) && !isTelegramEnabled(telegram)) return;
+  const { sweepChats } = await import("@/lib/chat/processor");
+  const timer = setInterval(() => void sweepChats(), 60_000);
   timer.unref?.();
 }

@@ -1,3 +1,5 @@
+import { channelLabels, type Channel } from "@/lib/chat/types";
+
 const base = "inline-flex items-center rounded-full px-2.5 py-1 text-[0.8125rem] leading-none font-medium whitespace-nowrap";
 
 export function DialogBadges({
@@ -19,6 +21,14 @@ export function DialogBadges({
       </span>
       <span className={`${base} border border-line-strong text-ink`}>{mode === "operator" ? "Оператор" : "Бот"}</span>
       {botBlocked ? <span className={`${base} border border-danger text-danger`}>Бот остановлен клиентом</span> : null}
+    </span>
+  );
+}
+
+export function ChannelBadge({ channel }: { channel: Channel }) {
+  return (
+    <span className={`${base} ${channel === "telegram" ? "bg-[#e7f4fb] text-[#1b6f99]" : "bg-[#efeafe] text-[#5b3fd1]"}`}>
+      {channelLabels[channel]}
     </span>
   );
 }

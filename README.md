@@ -134,15 +134,20 @@ Open Graph и разметка Article.
 - `MAX_BOT_TOKEN`, `MAX_WEBHOOK_SECRET`, `MAX_WEBHOOK_URL`, `MAX_API_CA_CERT` — чат-бот MAX
   (см. [MAX_INTEGRATION.md](MAX_INTEGRATION.md)). Без токена и секрета бот выключен, при запуске в журнал
   пишется строка `[max] chat bot off/on`.
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_BOT_USERNAME` — Telegram-бот
+  (см. [TELEGRAM_INTEGRATION.md](TELEGRAM_INTEGRATION.md)); в журнале — строка `[telegram] bot off/on`.
 
 Секреты задаются только в панели хостинга, в репозиторий не попадают (`.env*` в `.gitignore`).
 
-## Чат-бот MAX
+## Чат-боты MAX и Telegram
 
-Webhook `https://<домен>/api/max/webhook` принимает события бота, сценарий отвечает клиенту по меню и
-оформляет заявку (в ту же таблицу `requests`), переписка видна в админке в разделе «MAX — обращения»
-(`/admin/max`), оператор отвечает оттуда — ответ уходит клиенту в MAX. Подключение, проверка и ограничения —
-в [MAX_INTEGRATION.md](MAX_INTEGRATION.md). Тексты и кнопки бота — в `src/config/max-bot.ts`.
+Общая система обращений из мессенджеров (`src/lib/chat/`): Webhook каждого канала
+(`/api/max/webhook`, `/api/telegram/webhook`) сохраняет события, общий сценарий отвечает клиенту по меню и
+оформляет заявку (в ту же таблицу `requests`), переписка всех каналов видна в админке в разделе «Обращения»
+(`/admin/obrashcheniya`, фильтр по каналу), оператор отвечает оттуда — ответ уходит клиенту в его мессенджер.
+Каналы подключаются адаптерами (`src/lib/max/adapter.ts`, `src/lib/telegram/adapter.ts`, список —
+`src/lib/chat/registry.ts`). Тексты и кнопки ботов — в `src/config/chat-bot.ts`. Подключение, проверка и
+ограничения — [MAX_INTEGRATION.md](MAX_INTEGRATION.md) и [TELEGRAM_INTEGRATION.md](TELEGRAM_INTEGRATION.md).
 
 ## Форма заявки
 
@@ -242,8 +247,9 @@ Webhook `https://<домен>/api/max/webhook` принимает события
   (страницы, API, поддельный cookie); неверный пароль; вход, флаги cookie, выход и отзыв токена; заявка с сайта
   появляется в админке без дубликата при двойном нажатии; ошибка базы не даёт ложного успеха; статус и заметки
   сохраняются после перезагрузки; поиск, фильтр, удаление; CSV после входа с кириллицей и экранированием формул.
-  Чат-бот MAX проверяется с имитацией MAX Bot API (`tests/e2e/max-mock-server.mjs`, порт 3203): секрет Webhook,
-  повторная доставка, ответ оператора из админки доходит до API, режимы, регистрация Webhook.
+  Чат-боты проверяются с имитациями MAX Bot API (`tests/e2e/max-mock-server.mjs`, порт 3203) и Telegram Bot API
+  (`tests/e2e/telegram-mock-server.mjs`, порт 3204): секрет Webhook, повторная доставка, кнопки меню, заявка,
+  ответ оператора из админки доходит до API, режимы, регистрация Webhook.
 
 `TEST_DATABASE_URL` — **отдельная тестовая база**: тесты очищают в ней все таблицы.
 

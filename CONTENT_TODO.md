@@ -30,6 +30,9 @@
 - [ ] Чат-бот MAX: задать `MAX_BOT_TOKEN` и `MAX_WEBHOOK_SECRET` в Timeweb, зарегистрировать Webhook в
   «Настройках MAX» и пройти проверку из `MAX_INTEGRATION.md` (раздел 4); до приёма заявок через бота —
   обновить политику и согласие (`LEGAL_REVIEW.md`, п. 4.10).
+- [ ] Telegram-бот: задать `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` (и по желанию `TELEGRAM_BOT_USERNAME`),
+  зарегистрировать Webhook в «Настройках каналов», пройти проверку из `TELEGRAM_INTEGRATION.md` (раздел 4);
+  юридические вопросы — `LEGAL_REVIEW.md`, п. 4.11. Решить, вести ли кнопку Telegram на сайте в бота.
 
 ## 3. Реквизиты — по желанию (`requisites`)
 

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
-import { retryMessage } from "@/app/admin/max/actions";
+import { retryMessage } from "@/app/admin/obrashcheniya/actions";
 import type { ActionState } from "@/app/admin/actions";
 import { ActionMessage } from "@/components/admin/RequestEditor";
 
