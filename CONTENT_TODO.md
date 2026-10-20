@@ -24,7 +24,7 @@
 
 - [x] `phone` — +7 (936) 313-32-02 (добавлен 19.10.2026);
 - [x] `messengers` — WhatsApp (wa.me/79363133202);
-- [x] Telegram — чат по номеру +7 (936) 313-32-02 (`https://t.me/+79363133202`);
+- [x] Telegram — бот компании @IntSoftHoldingBot (`https://t.me/IntSoftHoldingBot?start=site`, 21.10.2026);
 - [x] MAX — чат-бот @id9734021152_bot (https://max.ru/id9734021152_bot); значок нарисован по фирменному виду — при наличии заменить на официальный SVG из брендбука MAX;
 - [ ] `officeAddress` — адрес офиса для посетителей, если отличается от юридического.
 - [ ] Чат-бот MAX: задать `MAX_BOT_TOKEN` и `MAX_WEBHOOK_SECRET` в Timeweb, зарегистрировать Webhook в
@@ -32,7 +32,7 @@
   обновить политику и согласие (`LEGAL_REVIEW.md`, п. 4.10).
 - [ ] Telegram-бот: задать `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` (и по желанию `TELEGRAM_BOT_USERNAME`),
   зарегистрировать Webhook в «Настройках каналов», пройти проверку из `TELEGRAM_INTEGRATION.md` (раздел 4);
-  юридические вопросы — `LEGAL_REVIEW.md`, п. 4.11. Решить, вести ли кнопку Telegram на сайте в бота.
+  юридические вопросы — `LEGAL_REVIEW.md`, п. 4.11.
 
 ## 3. Реквизиты — по желанию (`requisites`)
 

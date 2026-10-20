@@ -91,9 +91,9 @@ export const company: Company = {
     workingHours: "Ежедневно с 10:00 до 20:00 по московскому времени",
     messengers: {
       whatsapp: { href: "https://wa.me/79363133202" },
-      // Чат по номеру. Откроется, если в настройках конфиденциальности Telegram для этого номера
-      // разрешён поиск по номеру телефона («Кто может найти меня по номеру» — «Все»).
-      telegram: { href: "https://t.me/+79363133202" },
+      // Telegram-бот компании (@IntSoftHoldingBot). Метка start=site — обращение пришло с сайта
+      // (видна в карточке клиента в админке как источник).
+      telegram: { href: "https://t.me/IntSoftHoldingBot?start=site" },
       // Чат-бот компании в MAX (@id9734021152_bot).
       max: { href: "https://max.ru/id9734021152_bot" },
     },
