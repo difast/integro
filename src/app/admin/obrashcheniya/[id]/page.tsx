@@ -243,6 +243,21 @@ export default async function AdminChatDialogPage({ params, searchParams }: Prop
     { label: "Последнее сообщение", value: client.lastMessageAt ? formatMoscowDateTime(client.lastMessageAt) : "—" },
     { label: "Шаг сценария", value: client.flowStep ? (stepText[client.flowStep] ?? client.flowStep) : "—" },
     {
+      label: "Напоминания о заявке",
+      value:
+        client.reminderStage === 0
+          ? "не отправлялись"
+          : `отправлено ${client.reminderStage} из 2${client.lastReminderAt ? `, последнее ${formatMoscowDateTime(client.lastReminderAt)}` : ""}`,
+    },
+    {
+      label: "Опрос после закрытия",
+      value: client.surveyDueAt
+        ? `запланирован на ${formatMoscowDateTime(client.surveyDueAt)}`
+        : client.surveySentAt
+          ? `отправлен ${formatMoscowDateTime(client.surveySentAt)}`
+          : "—",
+    },
+    {
       label: "Согласие на обработку ПД",
       value: client.consentAt ? `Дано в боте ${formatMoscowDateTime(client.consentAt)}, редакция от ${client.consentRevision}` : "Не давалось",
     },

@@ -64,6 +64,8 @@ const CONTACT_TIME_MAX = 200;
 const cb = (text: string, payload: string): BotButton => ({ type: "callback", text, payload });
 
 export const keyboards = {
+  reminder: (): BotButton[][] => [[cb(botButtons.resume, "resume")], [cb(botButtons.cancel, "cancel")]],
+  survey: (): BotButton[][] => [[cb(botButtons.surveyNo, "survey:no"), cb(botButtons.surveyYes, "survey:yes")]],
   menu: (): BotButton[][] => [
     [cb(botButtons.ocenka, "sec:ocenka")],
     [cb(botButtons.sudeb, "sec:sudeb")],
@@ -169,7 +171,7 @@ function section(payload: string): BotReply | null {
   return null;
 }
 
-const isApplicationStep = (step: Step) =>
+export const isApplicationStep = (step: Step) =>
   step === "consent" || step === "name" || step === "direction" || step === "description" || step === "phone" || step === "contact_time" || step === "confirm" || step === "edit";
 
 function matches(text: string, words: readonly string[]): boolean {
@@ -255,6 +257,8 @@ function handleCallback(payload: string, state: FlowState, context: BotContext):
     return startApplication(context);
   }
   if (payload === "specialist") return toSpecialist();
+  // «Продолжить заявку» из напоминания: повтор вопроса текущего шага.
+  if (payload === "resume") return { state, replies: [isApplicationStep(state.step) ? prompt(state) : menuReply()] };
   if (payload === "cancel") {
     if (!isApplicationStep(state.step)) return { state: { step: "menu" }, replies: [menuReply()] };
     return { state: { step: "menu" }, replies: [{ text: botTexts.cancelled }, menuReply()] };

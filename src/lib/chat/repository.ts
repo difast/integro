@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { botFollowUps } from "@/config/chat-bot";
 import { query, withTransaction } from "@/lib/db";
 import { isUuid } from "@/lib/requests/repository";
 import { buildChatWhere, CHAT_PAGE_SIZE, type ChatFilters } from "./filters";
@@ -35,6 +36,10 @@ export type ChatClient = ChatClientListItem & {
   consentRevision: string | null;
   flowStep: string | null;
   personId: string | null;
+  reminderStage: number;
+  lastReminderAt: Date | null;
+  surveyDueAt: Date | null;
+  surveySentAt: Date | null;
 };
 
 export type ChatMessageRecord = {
@@ -77,12 +82,17 @@ type ClientRow = {
   last_message_preview: string | null;
   last_message_direction: "in" | "out" | null;
   person_id: string | null;
+  reminder_stage: number;
+  last_reminder_at: Date | null;
+  survey_due_at: Date | null;
+  survey_sent_at: Date | null;
   request_count: string;
 };
 
 const CLIENT_COLUMNS = `c.id, c.channel, c.external_user_id, c.chat_id, c.first_name, c.last_name, c.username, c.source, c.phone,
   c.status, c.mode, c.needs_reply, c.bot_blocked, c.flow_state, c.consent_at, c.consent_revision, c.first_seen_at,
   c.last_seen_at, c.last_message_at, c.last_message_preview, c.last_message_direction, c.person_id,
+  c.reminder_stage, c.last_reminder_at, c.survey_due_at, c.survey_sent_at,
   (SELECT count(*) FROM requests r WHERE r.chat_client_id = c.id) AS request_count`;
 
 function toClient(row: ClientRow): ChatClient {
@@ -109,6 +119,10 @@ function toClient(row: ClientRow): ChatClient {
     lastMessagePreview: row.last_message_preview,
     lastMessageDirection: row.last_message_direction,
     personId: row.person_id,
+    reminderStage: row.reminder_stage,
+    lastReminderAt: row.last_reminder_at,
+    surveyDueAt: row.survey_due_at,
+    surveySentAt: row.survey_sent_at,
     requestCount: Number(row.request_count),
   };
 }
@@ -223,7 +237,18 @@ export async function updateChatClient(
   if (changes.status) {
     params.push(changes.status);
     sets.push(`status = $${params.length}`);
-    if (changes.status === "closed") sets.push("needs_reply = false");
+    if (changes.status === "closed") {
+      sets.push("needs_reply = false");
+      // Опрос после закрытия — если клиент писал в диалог и опрос ещё не отправлялся после его последнего сообщения.
+      if (botFollowUps.enabled) {
+        params.push(botFollowUps.surveyDelayMinutes);
+        sets.push(`survey_due_at = CASE WHEN status = 'open' AND NOT bot_blocked AND last_message_at IS NOT NULL
+          AND (survey_sent_at IS NULL OR survey_sent_at < last_message_at)
+          THEN now() + make_interval(mins => $${params.length}) ELSE survey_due_at END`);
+      }
+    } else {
+      sets.push("survey_due_at = NULL");
+    }
   }
   if (changes.needsReply !== undefined) {
     params.push(changes.needsReply);

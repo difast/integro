@@ -203,4 +203,18 @@ export const migrations: Migration[] = [
       ALTER TABLE requests ADD CONSTRAINT requests_channel_check CHECK (channel IN ('site', 'max', 'telegram'));
     `,
   },
+  {
+    // Автоматические сообщения: напоминания о незавершённой заявке и опрос после закрытия диалога.
+    // reminder_stage: 0 — не отправлялось, 1 — первое, 2 — второе (последнее); сбрасывается любым
+    // сообщением клиента. survey_due_at — когда отправить опрос (ставится при закрытии диалога).
+    id: "006_chat_followups",
+    sql: `
+      ALTER TABLE chat_clients ADD COLUMN reminder_stage smallint NOT NULL DEFAULT 0 CHECK (reminder_stage BETWEEN 0 AND 2);
+      ALTER TABLE chat_clients ADD COLUMN last_reminder_at timestamptz;
+      ALTER TABLE chat_clients ADD COLUMN survey_due_at timestamptz;
+      ALTER TABLE chat_clients ADD COLUMN survey_sent_at timestamptz;
+      CREATE INDEX chat_clients_reminder_idx ON chat_clients (last_seen_at) WHERE status = 'open' AND mode = 'bot' AND reminder_stage < 2;
+      CREATE INDEX chat_clients_survey_idx ON chat_clients (survey_due_at) WHERE survey_due_at IS NOT NULL;
+    `,
+  },
 ];

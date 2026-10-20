@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { company } from "@/config/company";
-import { botButtons, botDirections, botTexts } from "@/config/chat-bot";
+import { botButtons, botDirections, botFollowUps, botTexts } from "@/config/chat-bot";
 import { getService } from "@/config/services";
 import { describeDbError, query, withTransaction } from "@/lib/db";
 import { isMailConfigured, sendMail } from "@/lib/mail";
@@ -12,7 +12,7 @@ import { absoluteUrl } from "@/lib/site";
 import type { ChannelAdapter } from "./adapter";
 import { ChannelApiError } from "./errors";
 import { getAdapter } from "./registry";
-import { directionLabel, readState, runScenario, type BotInput, type BotReply } from "./scenario";
+import { directionLabel, keyboards, readState, runScenario, type BotInput, type BotReply, type Step } from "./scenario";
 import { channelLabels, isChannel, type AttachmentMeta, type BotButton, type Channel, type IncomingEvent } from "./types";
 
 /**
@@ -70,6 +70,9 @@ export function callbackLabel(payload: string): string {
     "edit:description": botButtons.editDescription,
     "edit:phone": botButtons.editPhone,
     "edit:contact_time": botButtons.editContactTime,
+    resume: botButtons.resume,
+    "survey:no": botButtons.surveyNo,
+    "survey:yes": botButtons.surveyYes,
   };
   if (direct[payload]) return direct[payload];
   const direction = botDirections.find((d) => `dir:${d.payload}` === payload);
@@ -184,21 +187,21 @@ async function insertIncoming(db: PoolClient, clientId: string, eventId: string,
   if (event.kind !== "stop" && event.kind !== "resume") {
     await db.query(
       `UPDATE chat_clients SET last_message_at = $2, last_message_preview = $3, last_message_direction = 'in',
-         status = 'open', updated_at = now() WHERE id = $1`,
+         status = 'open', reminder_stage = 0, survey_due_at = NULL, updated_at = now() WHERE id = $1`,
       [clientId, event.time, preview(text) || "(вложение)"],
     );
   }
   return true;
 }
 
-async function queueReply(db: PoolClient, clientId: string, reply: BotReply): Promise<string> {
+async function queueReply(db: PoolClient, clientId: string, reply: BotReply, kind = "text"): Promise<string> {
   const attachments: unknown[] = [];
   if (reply.buttons?.length) attachments.push({ type: "inline_keyboard", buttons: reply.buttons });
   if (reply.removeKeyboard) attachments.push({ type: "remove_keyboard" });
   const { rows } = await db.query<{ id: string }>(
     `INSERT INTO chat_messages (client_id, direction, author, kind, text, attachments, idempotency_key, status)
-     VALUES ($1, 'out', 'bot', 'text', $2, $3, $4, 'pending') RETURNING id`,
-    [clientId, reply.text.slice(0, 4000), attachments.length ? JSON.stringify(attachments) : null, randomUUID()],
+     VALUES ($1, 'out', 'bot', $5, $2, $3, $4, 'pending') RETURNING id`,
+    [clientId, reply.text.slice(0, 4000), attachments.length ? JSON.stringify(attachments) : null, randomUUID(), kind],
   );
   return String(rows[0]!.id);
 }
@@ -237,6 +240,25 @@ async function handleEvent(db: PoolClient, adapter: ChannelAdapter, eventId: str
       client.mode === "operator"
         ? { event, notification: botTexts.operatorMode, clearKeyboard: false }
         : { event, notification: callbackLabel(event.payload), clearKeyboard: true };
+  }
+
+  // Ответ на опрос после закрытия диалога — в любом режиме.
+  if (event.kind === "callback" && event.payload.startsWith("survey:")) {
+    after.callback = { event, notification: callbackLabel(event.payload), clearKeyboard: true };
+    if (event.payload === "survey:yes") {
+      await db.query(
+        `UPDATE chat_clients SET needs_reply = true,
+           flow_state = CASE WHEN mode = 'bot' THEN '{"step":"specialist","forwarded":true}'::jsonb ELSE flow_state END,
+           updated_at = now() WHERE id = $1`,
+        [client.id],
+      );
+      after.outbox.push(await queueReply(db, client.id, { text: botTexts.surveyQuestion }, "survey"));
+    } else {
+      // «Вопросов нет»: диалог остаётся закрытым.
+      await db.query("UPDATE chat_clients SET status = 'closed', updated_at = now() WHERE id = $1", [client.id]);
+      after.outbox.push(await queueReply(db, client.id, { text: botTexts.surveyThanks }, "survey"));
+    }
+    return after;
   }
 
   // Режим оператора: бот молчит, диалог помечается как требующий ответа.
@@ -475,6 +497,74 @@ export async function sendOutboxMessage(messageId: string): Promise<SendOutcome>
   }
 }
 
+// --- Автоматические сообщения спустя время ---
+
+const APPLICATION_STEPS: Step[] = ["consent", "name", "direction", "description", "phone", "contact_time", "confirm", "edit"];
+
+/**
+ * Напоминания о незавершённой заявке и опрос после закрытия диалога. Расписание — в базе
+ * (chat_clients.reminder_stage, survey_due_at); каждая запись захватывается под блокировкой строки,
+ * поэтому сообщение не уйдёт дважды даже при параллельной проверке.
+ */
+export async function runFollowUps(): Promise<void> {
+  if (!botFollowUps.enabled) return;
+  const [first, last] = botFollowUps.reminderHours;
+  const queued: string[] = [];
+
+  const due = await query<{ id: string; channel: string }>(
+    `SELECT id, channel FROM chat_clients
+     WHERE status = 'open' AND mode = 'bot' AND NOT bot_blocked AND reminder_stage < 2
+       AND flow_state->>'step' = ANY($1::text[])
+       AND last_seen_at > now() - make_interval(days => $4)
+       AND ((reminder_stage = 0 AND last_seen_at < now() - make_interval(hours => $2))
+         OR (reminder_stage = 1 AND last_seen_at < now() - make_interval(hours => $3)))
+     ORDER BY last_seen_at LIMIT 50`,
+    [APPLICATION_STEPS, first, last, botFollowUps.maxAgeDays],
+  );
+  for (const row of due) {
+    if (!isChannel(row.channel) || !getAdapter(row.channel).isEnabled()) continue;
+    const id = await withTransaction(async (db) => {
+      // Повторная проверка под блокировкой: клиент мог ответить, пока шла выборка.
+      const { rows } = await db.query<{ stage: number }>(
+        `SELECT CASE WHEN last_seen_at < now() - make_interval(hours => $3) THEN 2 ELSE 1 END AS stage
+         FROM chat_clients
+         WHERE id = $1 AND status = 'open' AND mode = 'bot' AND NOT bot_blocked AND reminder_stage < 2
+           AND flow_state->>'step' = ANY($4::text[])
+           AND ((reminder_stage = 0 AND last_seen_at < now() - make_interval(hours => $2))
+             OR (reminder_stage = 1 AND last_seen_at < now() - make_interval(hours => $3)))
+         FOR UPDATE`,
+        [row.id, first, last, APPLICATION_STEPS],
+      );
+      const stage = rows[0]?.stage;
+      if (!stage) return null;
+      await db.query("UPDATE chat_clients SET reminder_stage = $2, last_reminder_at = now(), updated_at = now() WHERE id = $1", [row.id, stage]);
+      return queueReply(db, row.id, { text: stage === 2 ? botTexts.reminderLast : botTexts.reminderFirst, buttons: keyboards.reminder() }, "reminder");
+    });
+    if (id) queued.push(id);
+  }
+
+  const surveys = await query<{ id: string; channel: string }>(
+    `SELECT id, channel FROM chat_clients WHERE survey_due_at IS NOT NULL AND survey_due_at <= now() ORDER BY survey_due_at LIMIT 50`,
+  );
+  for (const row of surveys) {
+    const id = await withTransaction(async (db) => {
+      const { rows } = await db.query<{ ok: boolean }>(
+        `UPDATE chat_clients SET survey_due_at = NULL,
+           survey_sent_at = CASE WHEN status = 'closed' AND NOT bot_blocked THEN now() ELSE survey_sent_at END,
+           updated_at = now()
+         WHERE id = $1 AND survey_due_at IS NOT NULL AND survey_due_at <= now()
+         RETURNING (status = 'closed' AND NOT bot_blocked) AS ok`,
+        [row.id],
+      );
+      if (!rows[0]?.ok) return null;
+      return queueReply(db, row.id, { text: botTexts.survey, buttons: keyboards.survey() }, "survey");
+    });
+    if (id && isChannel(row.channel) && getAdapter(row.channel).isEnabled()) queued.push(id);
+  }
+
+  for (const id of queued) await sendOutboxMessage(id);
+}
+
 // --- Фоновая проверка ---
 
 let sweeping = false;
@@ -507,6 +597,8 @@ export async function sweepChats(): Promise<void> {
        ORDER BY id LIMIT 50`,
     );
     for (const message of messages) await sendOutboxMessage(String(message.id));
+
+    await runFollowUps();
 
     // Минимизация: исходный JSON событий, которые не удалось обработать, хранится не дольше 7 дней,
     // служебные записи о событиях (без содержимого) — 30 дней; для защиты от повторной доставки этого достаточно.

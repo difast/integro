@@ -297,3 +297,11 @@ DNS). Поэтому положения сверены по поисковым �
 - Переменные: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_URL` (необязательно), `TELEGRAM_BOT_USERNAME` (необязательно).
 - Тесты: `tests/unit/telegram.test.ts`, `tests/unit/chat-scenario.test.ts`, `tests/integration/telegram-db.test.ts`, `tests/integration/chat-db.test.ts` (регресс MAX), `tests/e2e/telegram.spec.ts` с имитацией Bot API (`tests/e2e/telegram-mock-server.mjs`), `tests/e2e/max.spec.ts`.
 - Не проверено на реальном Telegram Bot API (нет токена и доступа к api.telegram.org из среды разработки) — порядок проверки в `TELEGRAM_INTEGRATION.md`, раздел 4.
+
+## 14. Дополнение 21.10.2026: автоматические сообщения ботов
+
+- MAX и Telegram: напоминание о незавершённой заявке через 2 и 24 часа после последнего сообщения клиента (кнопки «Продолжить заявку», «Отменить»), опрос «Остались ли у вас вопросы?» через 30 минут после закрытия диалога (кнопки «Вопросов нет», «Есть вопрос»).
+- Миграция `006_chat_followups`; расписание в базе, проверка раз в минуту (`runFollowUps` в `src/lib/chat/processor.ts`), настройки и тексты — `src/config/chat-bot.ts`.
+- В карточке клиента — число отправленных напоминаний и время опроса.
+- Тесты: `tests/integration/chat-followups.test.ts` (оба канала: сроки, отсутствие повторов, сброс ответом клиента, режим оператора, блокировка, ответы на опрос).
+- Правовой вопрос — `LEGAL_REVIEW.md`, п. 4.12.

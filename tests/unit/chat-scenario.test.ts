@@ -256,5 +256,13 @@ describe("чат-бот MAX: сценарий", () => {
   it("тексты не привязаны к одному мессенджеру", () => {
     expect(JSON.stringify(botTexts)).not.toMatch(/MAX|Telegram/);
   });
+
+  it("«Продолжить заявку» из напоминания повторяет вопрос текущего шага", () => {
+    const state: FlowState = { step: "description", draft: { key: "k", name: "Иван" } };
+    const r = runScenario(state, { type: "callback", payload: "resume" }, ctx());
+    expect(r.state).toEqual(state);
+    expect(r.replies[0]!.text).toBe(botTexts.askDescription);
+    expect(runScenario({ step: "menu" }, { type: "callback", payload: "resume" }, ctx()).replies[0]!.text).toBe(botTexts.menu);
+  });
 });
 
