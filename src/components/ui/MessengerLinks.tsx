@@ -1,4 +1,4 @@
-import { MessageSquare } from "lucide-react";
+import { useId } from "react";
 import { company } from "@/config/company";
 import type { ClickPlacement, MessengerKey } from "@/lib/stats/clicks";
 import { TrackedMessengerLink } from "./TrackedMessengerLink";
@@ -45,9 +45,24 @@ function TelegramIcon({ className }: { className?: string }) {
   );
 }
 
-// Логотип MAX добавим вместе со ссылкой на чат-бота; до этого кнопка не показывается.
+// Знак MAX по фирменному виду: сине-фиолетовый градиент и белое облачко. Если появится
+// официальный SVG из брендбука MAX, замените этот рисунок на него.
 function MaxIcon({ className }: { className?: string }) {
-  return <MessageSquare aria-hidden="true" className={className} strokeWidth={1.75} />;
+  const gradient = `max-gradient-${useId().replace(/:/g, "")}`;
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id={gradient} x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#00C2FF" />
+          <stop offset="0.5" stopColor="#3D6BFF" />
+          <stop offset="1" stopColor="#9B3DFF" />
+        </linearGradient>
+      </defs>
+      <rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill={`url(#${gradient})`} />
+      <circle cx="12.6" cy="11.4" r="5.1" fill="none" stroke="#fff" strokeWidth="2.3" />
+      <path d="M8.2 14.2 6.3 18.4l4.5-1.6z" fill="#fff" />
+    </svg>
+  );
 }
 
 export const messengerIcons: Record<MessengerItem["key"], (props: { className?: string }) => React.JSX.Element> = {

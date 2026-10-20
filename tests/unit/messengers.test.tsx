@@ -7,10 +7,11 @@ describe("контакты", () => {
   it("телефон и мессенджеры заданы", () => {
     expect(company.contacts.phone).toBe("+7 (936) 313-32-02");
     const items = getMessengers();
-    // WhatsApp и Telegram — чат с основным номером; MAX скрыт до появления ссылки на чат-бота.
-    expect(items.map((i) => i.key)).toEqual(["whatsapp", "telegram"]);
+    // WhatsApp и Telegram — чат с основным номером, MAX — чат-бот компании.
+    expect(items.map((i) => i.key)).toEqual(["whatsapp", "telegram", "max"]);
     expect(items[0]!.href).toBe("https://wa.me/79363133202");
     expect(items[1]!.href).toBe("https://t.me/+79363133202");
+    expect(items[2]!.href).toBe("https://max.ru/id9734021152_bot");
     expect(renderToStaticMarkup(<MessengerLinks placement="footer" items={[]} />)).toBe("");
   });
 
