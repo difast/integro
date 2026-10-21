@@ -54,6 +54,8 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
   // Пока домен не задан, сайт не индексируется (защита от индексации тестовых адресов).
   robots: getSiteUrl() ? { index: true, follow: true } : { index: false, follow: false },
+  // Подтверждение прав на сайт в Яндекс.Вебмастере (код публичный, не секрет).
+  verification: { yandex: "c6a43fa2a0b1f9cf" },
 };
 
 export const viewport: Viewport = {
