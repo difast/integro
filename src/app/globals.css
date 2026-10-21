@@ -217,117 +217,32 @@
 }
 
 /*
- * Кастомный курсор (src/components/layout/CustomCursor.tsx). Пока на <html> нет .has-custom-cursor
- * (сенсорные устройства, prefers-reduced-motion, мышь ещё не двигалась) — работает обычный системный курсор.
+ * Курсор мыши в фирменных цветах: стандартные стрелка и «рука» (public/cursors), заливка #263746 с белой
+ * обводкой — видны и на светлом, и на тёмном фоне. Это обычный системный курсор с другой картинкой: без
+ * скриптов и анимаций, позиционирование и отклик — как у системного. Растровые версии 1x/2x — для чёткости
+ * на экранах высокой плотности; если картинка не загрузилась, показывается стандартный курсор.
+ * Над текстом и в полях ввода — системная текстовая каретка (auto). Правила в слое base, поэтому утилиты
+ * Tailwind (например, disabled:cursor-not-allowed) по-прежнему действуют.
  */
-.custom-cursor {
-  --cursor-dot: #263746;
-  --cursor-ring: rgba(38, 55, 70, 0.42);
-  --cursor-accent: #b49a72;
-  --cursor-fill: rgba(180, 154, 114, 0);
-  --ring-scale: 1;
-  --dot-scale: 1;
-  --press: 1;
-  position: fixed;
-  inset: 0;
-  z-index: 2147483000;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-html:not(.has-custom-cursor) .custom-cursor {
-  display: none;
-}
-.custom-cursor[data-visible="true"] {
-  opacity: 1;
-}
-.custom-cursor[data-theme="dark"] {
-  --cursor-dot: #ffffff;
-  --cursor-ring: rgba(255, 255, 255, 0.5);
-}
-.custom-cursor[data-state="hover"] {
-  --ring-scale: 1.35;
-  --dot-scale: 0.5;
-  --cursor-ring: var(--cursor-accent);
-}
-.custom-cursor[data-state="card"] {
-  --ring-scale: 1.75;
-  --dot-scale: 0.5;
-  --cursor-ring: rgba(180, 154, 114, 0.7);
-  --cursor-fill: rgba(180, 154, 114, 0.08);
-}
-.custom-cursor[data-pressed="true"] {
-  --press: 0.82;
-}
-.custom-cursor__dot,
-.custom-cursor__ring {
-  position: absolute;
-  top: 0;
-  left: 0;
-  will-change: transform;
-}
-.custom-cursor__dot-shape,
-.custom-cursor__ring-shape {
-  position: absolute;
-  display: block;
-  border-radius: 9999px;
-  transition:
-    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 0.2s ease,
-    border-color 0.2s ease;
-}
-.custom-cursor__dot-shape {
-  top: -3px;
-  left: -3px;
-  width: 6px;
-  height: 6px;
-  background: var(--cursor-dot);
-  transform: scale(calc(var(--dot-scale) * var(--press)));
-}
-.custom-cursor__ring-shape {
-  top: -17px;
-  left: -17px;
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--cursor-ring);
-  background: var(--cursor-fill);
-  transform: scale(calc(var(--ring-scale) * var(--press)));
-}
-
-@media (hover: hover) and (pointer: fine) {
-  html.has-custom-cursor,
-  html.has-custom-cursor *,
-  html.has-custom-cursor *::before,
-  html.has-custom-cursor *::after {
-    cursor: none !important;
+@layer base {
+  html {
+    cursor: url("/cursors/arrow.svg") 3 2, default;
+    cursor: -webkit-image-set(url("/cursors/arrow.png") 1x, url("/cursors/arrow@2x.png") 2x) 3 2, default;
   }
-  /*
-   * Поля ввода, списки, видео со встроенными элементами управления, фреймы и модальные окна — системный курсор:
-   * auto даёт каретку в полях и стрелку в остальных местах, ссылкам и кнопкам ниже возвращается «рука».
-   */
-  html.has-custom-cursor
-    :is(
-      input:not([type="checkbox"], [type="radio"], [type="submit"], [type="button"]),
-      textarea,
-      select,
-      [contenteditable=""],
-      [contenteditable="true"],
-      video[controls],
-      iframe,
-      dialog,
-      dialog *,
-      [data-cursor="native"],
-      [data-cursor="native"] *
-    ) {
-    cursor: auto !important;
+  :where(p, h1, h2, h3, h4, h5, h6, li, dd, dt, td, th, blockquote, figcaption, address, pre, code),
+  :where(input:not([type="checkbox"], [type="radio"], [type="submit"], [type="button"], [type="range"], [type="color"], [type="file"]), textarea, [contenteditable=""], [contenteditable="true"]) {
+    cursor: auto;
   }
-  html.has-custom-cursor :is(dialog, [data-cursor="native"]) :is(a[href], button:not(:disabled), summary, label, select, [role="button"]) {
-    cursor: pointer !important;
+  :where(a[href], a[href] *, button, button *, summary, summary *, label[for], input[type="checkbox"], input[type="radio"], input[type="submit"], input[type="button"], [role="button"], [role="tab"]) {
+    cursor: url("/cursors/pointer.svg") 9 2, pointer;
+    cursor: -webkit-image-set(url("/cursors/pointer.png") 1x, url("/cursors/pointer@2x.png") 2x) 9 2, pointer;
+  }
+  :where(button:disabled, button:disabled *, [aria-disabled="true"], [aria-disabled="true"] *) {
+    cursor: not-allowed;
   }
 }
-
-@media print {
-  .custom-cursor {
-    display: none !important;
-  }
+/* Утилита cursor-pointer — тоже фирменная «рука». */
+.cursor-pointer {
+  cursor: url("/cursors/pointer.svg") 9 2, pointer;
+  cursor: -webkit-image-set(url("/cursors/pointer.png") 1x, url("/cursors/pointer@2x.png") 2x) 9 2, pointer;
 }
