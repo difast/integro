@@ -5,6 +5,7 @@ import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { AttributionCapture } from "@/components/layout/AttributionCapture";
 import { CookieNotice } from "@/components/layout/CookieNotice";
+import { CustomCursor } from "@/components/layout/CustomCursor";
 import { RequestModalProvider } from "@/components/request/RequestModal";
 
 // Направления формы и соответствие страниц услуг направлениям — для всплывающей формы.
@@ -25,6 +26,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       <SiteFooter />
       <CookieNotice />
       <AttributionCapture />
+      <CustomCursor />
     </RequestModalProvider>
   );
 }
