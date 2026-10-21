@@ -12,6 +12,7 @@ import { company } from "@/config/company";
 import { services } from "@/config/services";
 import { getChatClient } from "@/lib/chat/repository";
 import { CURRENCIES, isPaymentStatus, isRequestChannel, isRequestStage, manualChannels, type RequestChannel } from "@/lib/requests/funnel";
+import { listDirections } from "@/lib/sales-plan/repository";
 import { recordRequestCreated } from "@/lib/requests/history";
 import { parseDate, parseMoney } from "@/lib/requests/parse";
 import { createRequest, deleteRequest, isUuid, listLossReasons, saveLossReason, updateRequestWork } from "@/lib/requests/repository";
@@ -98,6 +99,10 @@ export async function saveRequest(_prev: ActionState, formData: FormData): Promi
   if (dealAmount === "bad" || paidAmount === "bad") return { status: "error", message: "Сумма — число, например 15000 или 15 000,50." };
   if (contractDate === "bad" || paidAt === "bad") return { status: "error", message: "Проверьте даты." };
   if (paymentStatus !== "none" && !paidAmount) return { status: "error", message: "Укажите полученную сумму или выберите «Оплаты нет»." };
+  // Дата оплаты нужна, чтобы выручка попала в нужный месяц плана продаж.
+  if (paymentStatus !== "none" && !paidAt) return { status: "error", message: "Укажите дату поступления оплаты." };
+  const directionRaw = formData.get("directionId");
+  const directionId = typeof directionRaw === "string" && directionRaw ? directionRaw : null;
   const lossRaw = formData.get("lossReasonId");
   const lossReasonId = typeof lossRaw === "string" && /^\d{1,9}$/.test(lossRaw) ? Number(lossRaw) : null;
   if (stage === "lost" && lossReasonId === null) return { status: "error", message: "Для проигранной сделки выберите причину потери." };
@@ -105,6 +110,9 @@ export async function saveRequest(_prev: ActionState, formData: FormData): Promi
   try {
     if (lossReasonId !== null && !(await listLossReasons(true)).some((r) => r.id === lossReasonId)) {
       return { status: "error", message: "Причина потери не найдена." };
+    }
+    if (directionId !== null && !(await listDirections()).some((d) => d.id === directionId)) {
+      return { status: "error", message: "Направление не найдено." };
     }
     const updated = await updateRequestWork(id, {
       status,
@@ -121,6 +129,7 @@ export async function saveRequest(_prev: ActionState, formData: FormData): Promi
       paymentStatus,
       paidAmount,
       paidAt,
+      directionId,
     });
     if (!updated) return { status: "error", message: "Заявка не найдена — возможно, она удалена." };
   } catch (error) {

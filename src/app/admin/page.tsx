@@ -52,7 +52,7 @@ export default async function AdminRequestsPage({ searchParams }: Props) {
   const { counts, list } = data;
   const newCount = counts.byStatus.new ?? 0;
   const exportFiltered = `/api/admin/export${filtersToSearch({ q: filters.q, status: filters.status, sort: filters.sort })}`;
-  const hasFilters = Boolean(filters.q || filters.status);
+  const hasFilters = Boolean(filters.q || filters.status || filters.direction);
   const sortLink = filtersToSearch({ ...filters, page: 1, sort: filters.sort === "new" ? "old" : "new" });
 
   return (
@@ -120,8 +120,20 @@ export default async function AdminRequestsPage({ searchParams }: Props) {
         </ul>
       </nav>
 
+      {filters.direction ? (
+        <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[var(--radius-control)] border-l-[3px] border-bronze bg-white px-4 py-3 text-[0.9375rem] text-ink">
+          {filters.direction === "none"
+            ? "Показаны заявки без направления плана продаж. Откройте заявку и выберите направление в блоке «Сделка»."
+            : "Показаны заявки одного направления плана продаж."}
+          <Link href={`/admin${filtersToSearch({ q: filters.q, status: filters.status, sort: filters.sort })}`} className="font-medium text-bronze-deep underline underline-offset-2">
+            Показать все
+          </Link>
+        </p>
+      ) : null}
+
       <form role="search" action="/admin" method="get" className="mt-4 flex flex-col gap-3 sm:flex-row">
         {filters.status ? <input type="hidden" name="status" value={filters.status} /> : null}
+        {filters.direction ? <input type="hidden" name="direction" value={filters.direction} /> : null}
         {filters.sort === "old" ? <input type="hidden" name="sort" value="old" /> : null}
         <label htmlFor="q" className="sr-only">
           Поиск по имени, телефону или электронной почте

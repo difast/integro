@@ -37,6 +37,8 @@ export type RequestRecord = {
   paymentStatus: PaymentStatus;
   paidAmount: string | null;
   paidAt: string | null;
+  /** Направление плана продаж (sales_directions.id); null — не классифицирована. */
+  directionId: string | null;
 };
 
 export type RequestListItem = Pick<RequestRecord, "id" | "createdAt" | "name" | "phone" | "email" | "serviceTitle" | "status" | "channel" | "stage" | "assignee">;
@@ -71,11 +73,12 @@ type Row = {
   payment_status: PaymentStatus;
   paid_amount: string | null;
   paid_at: string | null;
+  direction_id: string | null;
 };
 
 const FULL_COLUMNS = `id, created_at, updated_at, name, phone, email, service, service_title, message, status, notes, source_page, context, consent_revision, channel, chat_client_id,
   source_note, attribution, stage, stage_changed_at, loss_reason_id, loss_comment, assignee, deal_amount, currency,
-  to_char(contract_date, 'YYYY-MM-DD') AS contract_date, payment_status, paid_amount, to_char(paid_at, 'YYYY-MM-DD') AS paid_at`;
+  to_char(contract_date, 'YYYY-MM-DD') AS contract_date, payment_status, paid_amount, to_char(paid_at, 'YYYY-MM-DD') AS paid_at, direction_id`;
 
 function toRecord(row: Row): RequestRecord {
   return {
@@ -108,6 +111,7 @@ function toRecord(row: Row): RequestRecord {
     paymentStatus: row.payment_status,
     paidAmount: row.paid_amount,
     paidAt: row.paid_at,
+    directionId: row.direction_id,
   };
 }
 
@@ -145,8 +149,10 @@ export async function createRequest(input: NewRequest, db?: Executor): Promise<{
   const run = async <T extends { id: string }>(sql: string, params: unknown[]): Promise<T[]> =>
     db ? (await db.query<T>(sql, params)).rows : query<T>(sql, params);
   const inserted = await run<{ id: string }>(
-    `INSERT INTO requests (submission_key, name, phone, phone_digits, email, service, service_title, message, source_page, consent_revision, context, channel, chat_client_id, attribution, source_note, stage_changed_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now())
+    // Направление плана продаж — по услуге, которую выбрал клиент (sales_directions.service_slugs); без услуги — не задано.
+    `INSERT INTO requests (submission_key, name, phone, phone_digits, email, service, service_title, message, source_page, consent_revision, context, channel, chat_client_id, attribution, source_note, stage_changed_at, direction_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(),
+       (SELECT d.id FROM sales_directions d WHERE $6 <> '' AND $6 = ANY (d.service_slugs) ORDER BY d.sort LIMIT 1))
      ON CONFLICT (submission_key) DO NOTHING
      RETURNING id`,
     [
@@ -264,6 +270,7 @@ export type RequestWorkChanges = {
   paymentStatus: PaymentStatus;
   paidAmount: string | null;
   paidAt: string | null;
+  directionId: string | null;
 };
 
 /** Сохраняет изменения и записывает в историю каждое изменённое поле (кроме заметок). */
@@ -278,7 +285,7 @@ export async function updateRequestWork(id: string, changes: RequestWorkChanges)
          stage_changed_at = CASE WHEN stage <> $4 THEN now() ELSE stage_changed_at END,
          loss_reason_id = $5, loss_comment = $6, assignee = $7, channel = $8, source_note = $9,
          deal_amount = $10, currency = $11, contract_date = $12, payment_status = $13, paid_amount = $14, paid_at = $15,
-         updated_at = now()
+         direction_id = $16, updated_at = now()
        WHERE id = $1`,
       [
         id,
@@ -296,6 +303,7 @@ export async function updateRequestWork(id: string, changes: RequestWorkChanges)
         changes.paymentStatus,
         changes.paidAmount,
         changes.paidAt,
+        changes.directionId,
       ],
     );
     const money = (v: string | null) => (v === null ? null : Number(v).toFixed(2));
@@ -312,6 +320,7 @@ export async function updateRequestWork(id: string, changes: RequestWorkChanges)
       { field: "payment_status", oldValue: before.payment_status, newValue: changes.paymentStatus },
       { field: "paid_amount", oldValue: money(before.paid_amount), newValue: money(changes.paidAmount) },
       { field: "paid_at", oldValue: before.paid_at, newValue: changes.paidAt },
+      { field: "direction", oldValue: before.direction_id, newValue: changes.directionId },
     ]);
     return true;
   });

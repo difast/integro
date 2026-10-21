@@ -14,6 +14,7 @@ import { getRequest, listAssignees, listLossReasons, type LossReason, type Reque
 import { statusLabel } from "@/lib/requests/statuses";
 import { DeleteRequest } from "@/components/admin/RequestEditor";
 import { RequestWorkForm } from "@/components/admin/RequestWorkForm";
+import { listDirections, type SalesDirection } from "@/lib/sales-plan/repository";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 
 export const metadata: Metadata = { title: "Заявка" };
@@ -34,16 +35,18 @@ const fieldNames: Record<string, string> = {
   payment_status: "Оплата",
   paid_amount: "Получено",
   paid_at: "Дата оплаты",
+  direction: "Направление",
 };
 const actorNames: Record<string, string> = { admin: "сотрудник", system: "система", site: "сайт", bot: "бот" };
 
-function historyValue(field: string, value: string | null, reasons: LossReason[]): string {
+function historyValue(field: string, value: string | null, reasons: LossReason[], directions: SalesDirection[] = []): string {
   if (value === null || value === "") return "—";
   if (field === "status") return statusLabel(value);
   if (field === "stage") return stageLabel(value);
   if (field === "channel" || field === "created") return channelLabel(value);
   if (field === "payment_status") return paymentLabel(value);
   if (field === "loss_reason") return reasons.find((r) => String(r.id) === value)?.title ?? value;
+  if (field === "direction") return directions.find((d) => d.id === value)?.title ?? value;
   return value;
 }
 
@@ -56,9 +59,11 @@ export default async function AdminRequestPage({ params, searchParams }: Props) 
   let history: HistoryRecord[] = [];
   let reasons: LossReason[] = [];
   let assignees: string[] = [];
+  let directions: SalesDirection[] = [];
   try {
     request = await getRequest(id);
-    if (request) [history, reasons, assignees] = await Promise.all([listRequestHistory(request.id), listLossReasons(true), listAssignees()]);
+    if (request)
+      [history, reasons, assignees, directions] = await Promise.all([listRequestHistory(request.id), listLossReasons(true), listAssignees(), listDirections()]);
   } catch (error) {
     console.error("[admin] failed to load request:", describeDbError(error));
     return (
@@ -173,7 +178,7 @@ export default async function AdminRequestPage({ params, searchParams }: Props) 
               Работа с заявкой
             </h2>
             <div className="mt-4">
-              <RequestWorkForm request={request} lossReasons={reasons.filter((r) => r.active || r.id === request.lossReasonId)} assignees={assignees} />
+              <RequestWorkForm request={request} lossReasons={reasons.filter((r) => r.active || r.id === request.lossReasonId)} assignees={assignees} directions={directions} />
             </div>
           </section>
           <section aria-labelledby="request-history" className="rounded-[var(--radius-card)] bg-white p-6 sm:p-8">
@@ -190,7 +195,7 @@ export default async function AdminRequestPage({ params, searchParams }: Props) 
                     <span className="text-ink">
                       {h.field === "created"
                         ? `заявка создана (${historyValue("created", h.newValue, reasons)})`
-                        : `${fieldNames[h.field] ?? h.field}: ${historyValue(h.field, h.oldValue, reasons)} → ${historyValue(h.field, h.newValue, reasons)}`}
+                        : `${fieldNames[h.field] ?? h.field}: ${historyValue(h.field, h.oldValue, reasons, directions)} → ${historyValue(h.field, h.newValue, reasons, directions)}`}
                     </span>
                   </li>
                 ))}

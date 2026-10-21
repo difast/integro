@@ -28,10 +28,12 @@ export function RequestWorkForm({
   request,
   lossReasons,
   assignees,
+  directions,
 }: {
   request: RequestRecord;
   lossReasons: { id: number; title: string }[];
   assignees: string[];
+  directions: { id: string; title: string }[];
 }) {
   const [state, action, pending] = useActionState(saveRequest, initial);
   const [stage, setStage] = useState(request.stage);
@@ -95,6 +97,21 @@ export function RequestWorkForm({
       </Fieldset>
 
       <Fieldset legend="Сделка">
+        <label className={label}>
+          Направление (план продаж)
+          <select name="directionId" defaultValue={request.directionId ?? ""} className={control}>
+            <option value="">Не указано</option>
+            {directions.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="text-[0.8125rem] text-muted">
+          По направлению заявка учитывается в автоматических фактах плана продаж (лиды, продажи и выручка).
+          {request.directionId ? "" : ` Услуга, выбранная клиентом: «${request.serviceTitle}».`}
+        </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className={`${label} sm:col-span-1`}>
             Сумма по договору
@@ -136,7 +153,7 @@ export function RequestWorkForm({
           </label>
           <label className={label}>
             Дата поступления
-            <input name="paidAt" type="date" defaultValue={request.paidAt ?? ""} className={control} />
+            <input name="paidAt" type="date" defaultValue={request.paidAt ?? ""} required={payment !== "none"} className={control} />
           </label>
         </div>
       </Fieldset>

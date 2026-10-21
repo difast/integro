@@ -87,6 +87,7 @@ const work = (patch: Partial<import("@/lib/requests/repository").RequestWorkChan
   paymentStatus: "none",
   paidAmount: null,
   paidAt: null,
+  directionId: null,
   ...patch,
 });
 

@@ -16,6 +16,7 @@ import { migrations } from "@/lib/db/migrations";
 /** Таблицы в порядке восстановления (сначала те, на которые ссылаются другие). */
 export const BACKUP_TABLES = [
   "loss_reasons",
+  "sales_directions",
   "chat_clients",
   "requests",
   "request_history",
@@ -31,6 +32,7 @@ export const BACKUP_TABLES = [
   "integration_status",
   "system_events",
   "backup_runs",
+  "sales_plans",
 ] as const;
 
 /** Не копируются: сессии и попытки входа (восстанавливать их небезопасно), одноразовые коды, служебная таблица миграций. */

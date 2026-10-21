@@ -374,4 +374,48 @@ export const migrations: Migration[] = [
       CREATE INDEX request_history_stage_idx ON request_history (field, new_value, request_id);
     `,
   },
+  {
+    // План продаж: направления (названия меняются в админке), плановые и ручные фактические показатели
+    // по месяцу и направлению, направление заявки для автоматического подсчёта фактов.
+    id: "008_sales_plan",
+    sql: `
+      CREATE TABLE sales_directions (
+        id             text PRIMARY KEY CHECK (id ~ '^[a-z_]{1,30}$'),
+        title          text NOT NULL CHECK (char_length(title) BETWEEN 1 AND 100),
+        -- Услуги сайта и ботов (requests.service), которые относятся к направлению: новая заявка
+        -- получает направление по услуге, выбранной клиентом. Старые заявки не классифицируются автоматически.
+        service_slugs  text[] NOT NULL DEFAULT '{}',
+        sort           integer NOT NULL DEFAULT 0
+      );
+      INSERT INTO sales_directions (id, title, service_slugs, sort) VALUES
+        ('ocenka', 'Оценка', '{ocenka}', 10),
+        ('sud_zaklyuchenie', 'Судебное заключение', '{ekspertnye-issledovaniya}', 20),
+        ('sud_ekspertiza', 'Судебная экспертиза', '{sudebnaya-ekspertiza}', 30);
+
+      ALTER TABLE requests ADD COLUMN direction_id text REFERENCES sales_directions (id) ON DELETE SET NULL;
+      CREATE INDEX requests_direction_created_idx ON requests (direction_id, created_at);
+      CREATE INDEX requests_direction_paid_idx ON requests (direction_id, paid_at) WHERE payment_status <> 'none';
+
+      -- Одна запись на месяц и направление. Пустое значение (NULL) — «не заполнено», не ноль.
+      -- Вычисляемые показатели (отклонения, средний чек, конверсия) не хранятся.
+      CREATE TABLE sales_plans (
+        id                   bigserial PRIMARY KEY,
+        period               date NOT NULL CHECK (extract(day FROM period) = 1),
+        direction_id         text NOT NULL REFERENCES sales_directions (id) ON DELETE CASCADE,
+        revenue_plan         numeric(14, 2) CHECK (revenue_plan >= 0),
+        sales_plan           integer CHECK (sales_plan >= 0),
+        leads_plan           integer CHECK (leads_plan >= 0),
+        revenue_fact         numeric(14, 2) CHECK (revenue_fact >= 0),
+        sales_fact           integer CHECK (sales_fact >= 0),
+        leads_fact           integer CHECK (leads_fact >= 0),
+        revenue_fact_source  text NOT NULL DEFAULT 'auto' CHECK (revenue_fact_source IN ('auto', 'manual')),
+        sales_fact_source    text NOT NULL DEFAULT 'auto' CHECK (sales_fact_source IN ('auto', 'manual')),
+        leads_fact_source    text NOT NULL DEFAULT 'auto' CHECK (leads_fact_source IN ('auto', 'manual')),
+        version              integer NOT NULL DEFAULT 1,
+        created_at           timestamptz NOT NULL DEFAULT now(),
+        updated_at           timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (period, direction_id)
+      );
+    `,
+  },
 ];

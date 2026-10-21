@@ -8,13 +8,18 @@ describe("parseFilters", () => {
       status: "done",
       sort: "old",
       page: 3,
+      direction: null,
     });
     expect(parseFilters({ status: "drop table", sort: "x", page: "-5" })).toEqual({
       q: "",
       status: null,
       sort: "new",
       page: 1,
+      direction: null,
     });
+    expect(parseFilters({ direction: "none" }).direction).toBe("none");
+    expect(parseFilters({ direction: "ocenka" }).direction).toBe("ocenka");
+    expect(parseFilters({ direction: "'; drop" }).direction).toBeNull();
   });
 
   it("limits search length", () => {
