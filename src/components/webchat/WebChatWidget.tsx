@@ -452,7 +452,8 @@ export function WebChatWidget({ workingHours, policyHref }: { workingHours: stri
                       </>
                     ) : m.state === "failed" ? (
                       <span className="inline-flex flex-wrap items-center gap-x-2 text-danger">
-                        <AlertCircle aria-hidden="true" className="h-3 w-3" /> Не отправлено
+                        <AlertCircle aria-hidden="true" className="h-3 w-3" />
+                        <span>Не отправлено</span>
                         <button type="button" onClick={() => retry(m)} className="inline-flex items-center gap-0.5 font-medium underline underline-offset-2">
                           <RotateCw aria-hidden="true" className="h-3 w-3" /> Повторить
                         </button>

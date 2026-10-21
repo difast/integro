@@ -39,7 +39,9 @@ export async function POST(request: Request) {
       source,
     });
     if (!result.ok) return json({ error: result.reason }, result.reason === "consent" ? 400 : 409);
-    if (result.token) await writeSessionToken(result.token);
+    // Новый диалог — новая cookie; в существующем срок cookie продлевается вместе со сроком сессии в базе.
+    const sessionToken = result.token ?? token;
+    if (sessionToken) await writeSessionToken(sessionToken);
     await markOk("web", "visitor_message");
     return json({ message: result.message, duplicate: result.duplicate });
   } catch (error) {

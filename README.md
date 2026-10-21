@@ -150,7 +150,7 @@ Open Graph и разметка Article.
 «Система» (интеграции, ошибки, повторы, резервные копии, сроки хранения). Настройка, восстановление из копии,
 формулы показателей и результаты аудита безопасности — [ADMIN_OPERATIONS.md](ADMIN_OPERATIONS.md).
 
-## Чат-боты MAX и Telegram
+## Чат-боты MAX и Telegram, онлайн-чат на сайте
 
 Общая система обращений из мессенджеров (`src/lib/chat/`): Webhook каждого канала
 (`/api/max/webhook`, `/api/telegram/webhook`) сохраняет события, общий сценарий отвечает клиенту по меню и
@@ -159,6 +159,10 @@ Open Graph и разметка Article.
 Каналы подключаются адаптерами (`src/lib/max/adapter.ts`, `src/lib/telegram/adapter.ts`, список —
 `src/lib/chat/registry.ts`). Тексты и кнопки ботов — в `src/config/chat-bot.ts`. Подключение, проверка и
 ограничения — [MAX_INTEGRATION.md](MAX_INTEGRATION.md) и [TELEGRAM_INTEGRATION.md](TELEGRAM_INTEGRATION.md).
+
+Онлайн-чат на сайте (консультант «Анастасия») — третий канал той же системы (`src/lib/webchat/`, виджет
+`src/components/webchat/`, раздел админки «Веб-чат»). Переменных окружения не требует; устройство, защита и
+обновление сообщений — [ADMIN_OPERATIONS.md](ADMIN_OPERATIONS.md), раздел 4б.
 
 ## Форма заявки
 
