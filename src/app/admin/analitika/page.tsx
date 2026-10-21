@@ -187,7 +187,7 @@ function Report({ report, f }: { report: AnalyticsReport; f: AnalyticsFilters })
     <>
       <Section id="summary" title="Основные показатели">
         <dl className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-          <Card title="Новые диалоги" value={d ? d.total : "—"} hint={d ? "MAX и Telegram, начатые в периоде" : "Для выбранного канала диалогов нет"} testId="metric-dialogs" />
+          <Card title="Новые диалоги" value={d ? d.total : "—"} hint={d ? "MAX, Telegram и веб-чат, начатые в периоде" : "Для выбранного канала диалогов нет"} testId="metric-dialogs" />
           <Card
             title="Уникальные клиенты в диалогах"
             value={d ? d.uniquePeople : "—"}

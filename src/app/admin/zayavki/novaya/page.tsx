@@ -19,7 +19,7 @@ export default async function NewRequestPage() {
       <h1 className="mt-5 text-[2rem] leading-tight">Новая заявка</h1>
       <p className="mt-2 text-muted">
         Для обращений, которые не поступили через сайт или ботов: WhatsApp (переписка в приложении в систему не
-        попадает), Авито, телефон, почта. Заявки из диалогов MAX и Telegram создаются из карточки диалога.
+        попадает), Авито, телефон, почта. Заявки из диалогов MAX, Telegram и веб-чата создаются из карточки диалога.
       </p>
       <section className="mt-6 rounded-[var(--radius-card)] bg-white p-5 sm:p-6">
         <ManualRequestForm channels={manualChannels.map((c) => ({ value: c.value, label: c.label }))} services={services.map((s) => ({ value: s.slug, label: s.title }))} />

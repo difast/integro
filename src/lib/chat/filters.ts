@@ -9,7 +9,9 @@ export const CHAT_PAGE_SIZE = 30;
 
 export const chatDialogFilters = [
   { value: "", label: "Все" },
+  { value: "new", label: "Новые" },
   { value: "needs_reply", label: "Ждут ответа" },
+  { value: "waiting_client", label: "Ждут клиента" },
   { value: "open", label: "В работе" },
   { value: "closed", label: "Закрытые" },
 ] as const;
@@ -72,7 +74,12 @@ export function buildChatWhere(filters: ChatFilters): { sql: string; params: unk
     return `$${params.length}`;
   };
 
+  // Новые: открытые диалоги, на которые оператор ещё ни разу не отвечал.
+  if (filters.filter === "new")
+    parts.push("c.status = 'open' AND NOT EXISTS (SELECT 1 FROM chat_messages m WHERE m.client_id = c.id AND m.author = 'operator')");
   if (filters.filter === "needs_reply") parts.push("c.needs_reply AND c.status = 'open'");
+  // Ждут клиента: открытые, ответ не требуется, последнее сообщение — исходящее.
+  if (filters.filter === "waiting_client") parts.push("c.status = 'open' AND NOT c.needs_reply AND c.last_message_direction = 'out'");
   if (filters.filter === "open") parts.push("c.status = 'open'");
   if (filters.filter === "closed") parts.push("c.status = 'closed'");
   if (filters.channel) parts.push(`c.channel = ${add(filters.channel)}`);

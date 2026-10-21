@@ -418,4 +418,29 @@ export const migrations: Migration[] = [
       );
     `,
   },
+  {
+    // Онлайн-чат на сайте — третий канал общей системы обращений (рядом с MAX и Telegram).
+    // Посетитель определяется только по случайному токену в cookie (в базе — SHA-256), без имени и телефона.
+    // Прочтение: оператором (operator_read_at) и посетителем (visitor_read_at); набор ответа оператором —
+    // operator_typing_until (показывается посетителю, пока не истёк).
+    id: "009_web_chat",
+    sql: `
+      ALTER TABLE chat_clients DROP CONSTRAINT chat_clients_channel_check;
+      ALTER TABLE chat_clients ADD CONSTRAINT chat_clients_channel_check CHECK (channel IN ('max', 'telegram', 'web'));
+      ALTER TABLE chat_clients ADD COLUMN web_session_hash text UNIQUE CHECK (web_session_hash ~ '^[0-9a-f]{64}$');
+      ALTER TABLE chat_clients ADD COLUMN web_session_expires_at timestamptz;
+      ALTER TABLE chat_clients ADD COLUMN operator_read_at timestamptz;
+      ALTER TABLE chat_clients ADD COLUMN visitor_read_at timestamptz;
+      ALTER TABLE chat_clients ADD COLUMN visitor_active_at timestamptz;
+      ALTER TABLE chat_clients ADD COLUMN operator_typing_until timestamptz;
+      CREATE SEQUENCE web_chat_visitor_seq;
+
+      -- Ответы, ставшие видимыми посетителю, выбираются по времени отправки (sent_at).
+      CREATE INDEX chat_messages_client_sent_idx ON chat_messages (client_id, sent_at) WHERE direction = 'out';
+
+      ALTER TABLE requests DROP CONSTRAINT requests_channel_check;
+      ALTER TABLE requests ADD CONSTRAINT requests_channel_check
+        CHECK (channel IN ('site', 'max', 'telegram', 'web', 'whatsapp', 'avito', 'phone', 'email', 'other'));
+    `,
+  },
 ];

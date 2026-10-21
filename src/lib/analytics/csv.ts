@@ -18,7 +18,7 @@ export function reportToCsv(report: AnalyticsReport, f: AnalyticsFilters): strin
   const d = report.dialogs;
   const r = report.requests;
   if (d) {
-    lines.push(line(["Новые диалоги", d.total, null, null, null, "MAX и Telegram, начатые в периоде"]));
+    lines.push(line(["Новые диалоги", d.total, null, null, null, "MAX, Telegram и веб-чат, начатые в периоде"]));
     lines.push(line(["Уникальные клиенты в диалогах", d.uniquePeople, null, null, null, "Связанные карточки — один человек"]));
     lines.push(line(["Без ответа сейчас", d.unanswered, ...ratioCells(d.unansweredShare), "Диалоги периода с отметкой «нужен ответ»"]));
     lines.push(line(["Время до первого ответа оператора, медиана, мин", d.firstReply.medianSeconds === null ? null : Math.round(d.firstReply.medianSeconds / 60), null, d.firstReply.count, null, "Диалогов с ответом оператора"]));

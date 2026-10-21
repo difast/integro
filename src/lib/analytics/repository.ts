@@ -10,7 +10,7 @@ import { ratio, type AnalyticsFilters, type Ratio } from "./filters";
  * Деньги не суммируются между валютами: итоги — отдельно по каждой валюте.
  */
 
-const CHAT_CHANNELS: RequestChannel[] = ["max", "telegram"];
+const CHAT_CHANNELS: RequestChannel[] = ["max", "telegram", "web"];
 
 type Where = { sql: string; params: unknown[] };
 
@@ -254,7 +254,7 @@ export async function getAnalyticsReport(f: AnalyticsFilters): Promise<Analytics
     note,
   });
   const funnel: FunnelStep[] = [
-    step("contact", "Первичное обращение", contacts, null, "Диалоги в мессенджерах, начатые в периоде, и заявки без диалога (сайт, ручные)"),
+    step("contact", "Первичное обращение", contacts, null, "Диалоги в мессенджерах и веб-чате, начатые в периоде, и заявки без диалога (сайт, ручные)"),
     step("qualified", "Квалифицированный лид", qualified, contacts, "Диалоги с отметкой оператора или с заявкой, и заявки без диалога"),
     step("request", "Заявка", r.total, qualified),
     step("negotiation", "Переговоры", r.negotiation, r.total),

@@ -35,6 +35,7 @@ export const requestChannels = [
   { value: "site", label: "Сайт" },
   { value: "max", label: "MAX" },
   { value: "telegram", label: "Telegram" },
+  { value: "web", label: "Веб-чат" },
   { value: "whatsapp", label: "WhatsApp" },
   { value: "avito", label: "Авито" },
   { value: "phone", label: "Телефон" },
@@ -45,7 +46,7 @@ export type RequestChannel = (typeof requestChannels)[number]["value"];
 export const isRequestChannel = (value: unknown): value is RequestChannel => requestChannels.some((c) => c.value === value);
 export const channelLabel = (value: string) => requestChannels.find((c) => c.value === value)?.label ?? value;
 
-/** Каналы, заявки из которых можно создать вручную (сайт и боты создают заявки сами). */
-export const manualChannels = requestChannels.filter((c) => !["site", "max", "telegram"].includes(c.value));
+/** Каналы, заявки из которых можно создать вручную (сайт и боты создают заявки сами, из веб-чата — из карточки диалога). */
+export const manualChannels = requestChannels.filter((c) => !["site", "max", "telegram", "web"].includes(c.value));
 
 export const CURRENCIES = ["RUB", "USD", "EUR", "CNY", "KZT", "BYN"] as const;

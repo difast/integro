@@ -1,12 +1,12 @@
 /**
- * Общие типы системы обращений из мессенджеров (MAX, Telegram). Адаптер канала переводит
+ * Общие типы системы обращений из мессенджеров (MAX, Telegram) и онлайн-чата на сайте (web). Адаптер канала переводит
  * событие платформы в IncomingEvent, а исходящее сообщение — из общего вида в формат платформы.
  */
 
-export const channels = ["max", "telegram"] as const;
+export const channels = ["max", "telegram", "web"] as const;
 export type Channel = (typeof channels)[number];
 
-export const channelLabels: Record<Channel, string> = { max: "MAX", telegram: "Telegram" };
+export const channelLabels: Record<Channel, string> = { max: "MAX", telegram: "Telegram", web: "Веб-чат" };
 
 export function isChannel(value: unknown): value is Channel {
   return typeof value === "string" && (channels as readonly string[]).includes(value);

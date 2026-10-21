@@ -11,7 +11,7 @@ export const notificationTypeLabels: Record<NotificationType, string> = {
   system: "Система",
 };
 
-const channelNames: Record<string, string> = { max: "MAX", telegram: "Telegram", site: "сайт", system: "система", backup: "резервная копия" };
+const channelNames: Record<string, string> = { max: "MAX", telegram: "Telegram", web: "веб-чат", site: "сайт", system: "система", backup: "резервная копия" };
 
 /**
  * Текст для push и Telegram — без персональных данных клиента (имени, телефона, текста сообщения):

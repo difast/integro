@@ -7,12 +7,13 @@ import { describeDbError, query } from "@/lib/db";
  * данных. Сбой записи журнала никогда не прерывает основную операцию.
  */
 
-export type MonitorChannel = "max" | "telegram" | "site" | "push" | "telegram_admin" | "backup" | "system";
+export type MonitorChannel = "max" | "telegram" | "web" | "site" | "push" | "telegram_admin" | "backup" | "system";
 export type MonitorResult = "ok" | "error" | "retry" | "duplicate" | "failed";
 
 export const monitorChannelLabels: Record<MonitorChannel, string> = {
   max: "MAX",
   telegram: "Telegram",
+  web: "Веб-чат",
   site: "Сайт",
   push: "Push-уведомления",
   telegram_admin: "Уведомления в Telegram",
@@ -24,6 +25,7 @@ export const monitorOperationLabels: Record<string, string> = {
   webhook: "Приём Webhook",
   process_event: "Обработка события",
   send_message: "Отправка сообщения клиенту",
+  visitor_message: "Сообщение посетителя веб-чата",
   create_request: "Создание заявки",
   notify: "Доставка уведомления",
   backup: "Резервная копия",

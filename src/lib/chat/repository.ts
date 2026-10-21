@@ -26,6 +26,10 @@ export type ChatClientListItem = {
   lastMessagePreview: string | null;
   lastMessageDirection: "in" | "out" | null;
   requestCount: number;
+  /** Сообщения клиента после последнего просмотра диалога оператором. */
+  unreadCount: number;
+  /** Последняя активность посетителя веб-чата (открытый виджет опрашивает сервер). */
+  visitorActiveAt: Date | null;
 };
 
 export type ChatClient = ChatClientListItem & {
@@ -41,6 +45,8 @@ export type ChatClient = ChatClientListItem & {
   surveyDueAt: Date | null;
   surveySentAt: Date | null;
   qualifiedAt: Date | null;
+  /** Когда посетитель веб-чата последний раз видел ответы — для отметки «прочитано». */
+  visitorReadAt: Date | null;
 };
 
 export type ChatMessageRecord = {
@@ -88,14 +94,20 @@ type ClientRow = {
   survey_due_at: Date | null;
   survey_sent_at: Date | null;
   qualified_at: Date | null;
+  visitor_read_at: Date | null;
+  visitor_active_at: Date | null;
   request_count: string;
+  unread_count: string;
 };
 
 const CLIENT_COLUMNS = `c.id, c.channel, c.external_user_id, c.chat_id, c.first_name, c.last_name, c.username, c.source, c.phone,
   c.status, c.mode, c.needs_reply, c.bot_blocked, c.flow_state, c.consent_at, c.consent_revision, c.first_seen_at,
   c.last_seen_at, c.last_message_at, c.last_message_preview, c.last_message_direction, c.person_id,
   c.reminder_stage, c.last_reminder_at, c.survey_due_at, c.survey_sent_at, c.qualified_at,
-  (SELECT count(*) FROM requests r WHERE r.chat_client_id = c.id) AS request_count`;
+  c.visitor_read_at, c.visitor_active_at,
+  (SELECT count(*) FROM requests r WHERE r.chat_client_id = c.id) AS request_count,
+  (SELECT count(*) FROM chat_messages m WHERE m.client_id = c.id AND m.direction = 'in'
+     AND m.created_at > coalesce(c.operator_read_at, '-infinity'::timestamptz)) AS unread_count`;
 
 function toClient(row: ClientRow): ChatClient {
   return {
@@ -126,6 +138,9 @@ function toClient(row: ClientRow): ChatClient {
     surveyDueAt: row.survey_due_at,
     surveySentAt: row.survey_sent_at,
     qualifiedAt: row.qualified_at,
+    visitorReadAt: row.visitor_read_at,
+    visitorActiveAt: row.visitor_active_at,
+    unreadCount: Number(row.unread_count),
     requestCount: Number(row.request_count),
   };
 }
@@ -150,7 +165,7 @@ export async function countChatNeedsReply(): Promise<Record<Channel | "total", n
   const rows = await query<{ channel: Channel; count: string }>(
     "SELECT channel, count(*) AS count FROM chat_clients WHERE needs_reply AND status = 'open' GROUP BY channel",
   );
-  const result: Record<Channel | "total", number> = { max: 0, telegram: 0, total: 0 };
+  const result: Record<Channel | "total", number> = { max: 0, telegram: 0, web: 0, total: 0 };
   for (const row of rows) {
     result[row.channel] = Number(row.count);
     result.total += Number(row.count);
@@ -245,7 +260,8 @@ export async function updateChatClient(
       // Опрос после закрытия — если клиент писал в диалог и опрос ещё не отправлялся после его последнего сообщения.
       if (botFollowUps.enabled) {
         params.push(botFollowUps.surveyDelayMinutes);
-        sets.push(`survey_due_at = CASE WHEN status = 'open' AND NOT bot_blocked AND last_message_at IS NOT NULL
+        // В веб-чате кнопок опроса нет — опрос только в мессенджерах с ботом.
+        sets.push(`survey_due_at = CASE WHEN status = 'open' AND channel <> 'web' AND NOT bot_blocked AND last_message_at IS NOT NULL
           AND (survey_sent_at IS NULL OR survey_sent_at < last_message_at)
           THEN now() + make_interval(mins => $${params.length}) ELSE survey_due_at END`);
       }
@@ -343,6 +359,12 @@ export async function unlinkChatClient(clientId: string): Promise<boolean> {
   });
 }
 
+/** Оператор открыл диалог: сообщения клиента до этого момента прочитаны. */
+export async function markOperatorRead(clientId: string): Promise<void> {
+  if (!isUuid(clientId)) return;
+  await query("UPDATE chat_clients SET operator_read_at = now() WHERE id = $1", [clientId]);
+}
+
 // --- Ответ оператора ---
 
 export type OperatorSendResult = SendOutcome & { messageId: string | null; duplicate?: boolean };
@@ -369,7 +391,12 @@ export async function sendOperatorReply(clientId: string, text: string, idempote
     const status = existing[0].status === "sent" || existing[0].status === "failed" || existing[0].status === "unknown" ? existing[0].status : "skipped";
     return { status, error: existing[0].error ?? undefined, messageId: String(existing[0].id), duplicate: true };
   }
-  await query("UPDATE chat_clients SET mode = 'operator', needs_reply = false, status = 'open', updated_at = now() WHERE id = $1", [clientId]);
+  // Ответ отправлен — «печатает» у посетителя веб-чата снимается, входящие считаются прочитанными.
+  await query(
+    `UPDATE chat_clients SET mode = 'operator', needs_reply = false, status = 'open', operator_typing_until = NULL,
+       operator_read_at = now(), updated_at = now() WHERE id = $1`,
+    [clientId],
+  );
   const id = String(inserted[0].id);
   return { ...(await sendOutboxMessage(id)), messageId: id };
 }
