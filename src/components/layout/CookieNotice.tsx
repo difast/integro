@@ -39,9 +39,14 @@ function subscribe(callback: () => void) {
   };
 }
 
+/** Принято ли уведомление (для элементов в том же углу экрана, например кнопки онлайн-чата). */
+export function useCookieNoticeAccepted(): boolean {
+  return useSyncExternalStore(subscribe, readAccepted, () => true);
+}
+
 export function CookieNotice() {
   // На сервере уведомление не рендерится, чтобы не мелькало у тех, кто его уже принял.
-  const accepted = useSyncExternalStore(subscribe, readAccepted, () => true);
+  const accepted = useCookieNoticeAccepted();
 
   if (accepted) return null;
 

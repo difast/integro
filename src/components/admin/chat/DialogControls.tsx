@@ -17,6 +17,7 @@ export function DialogControls({
   needsReply,
   qualified,
   hasRequest,
+  showMode = true,
 }: {
   clientId: string;
   mode: "bot" | "operator";
@@ -24,11 +25,14 @@ export function DialogControls({
   needsReply: boolean;
   qualified: boolean;
   hasRequest: boolean;
+  /** В веб-чате бота нет — переключения «бот / оператор» нет. */
+  showMode?: boolean;
 }) {
   const [state, action, pending] = useActionState(updateDialog, initial);
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="clientId" value={clientId} />
+      {showMode ? (
       <div>
         <p className="text-[0.9375rem] font-medium text-ink">Режим</p>
         <p className="mt-1 text-[0.8125rem] text-muted">
@@ -50,6 +54,7 @@ export function DialogControls({
           )}
         </div>
       </div>
+      ) : null}
       <div className="grid gap-2 sm:grid-cols-2">
         {needsReply ? (
           <button type="submit" name="action" value="replied" disabled={pending} className={btn}>

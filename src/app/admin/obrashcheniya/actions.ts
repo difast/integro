@@ -70,7 +70,9 @@ export async function sendReply(_prev: ReplyState, formData: FormData): Promise<
         resetKey: key,
         message: result.duplicate
           ? "Этот ответ уже был отправлен ранее — повторно не отправлялся."
-          : `${label} подтвердил отправку. Диалог переведён в режим оператора.`,
+          : client.channel === "web"
+            ? "Ответ сохранён и показан посетителю в окне чата на сайте."
+            : `${label} подтвердил отправку. Диалог переведён в режим оператора.`,
       };
     }
     if (result.status === "unknown") {

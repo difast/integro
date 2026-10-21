@@ -6,6 +6,9 @@ import { SiteHeader } from "@/components/layout/SiteHeader";
 import { AttributionCapture } from "@/components/layout/AttributionCapture";
 import { CookieNotice } from "@/components/layout/CookieNotice";
 import { RequestModalProvider } from "@/components/request/RequestModal";
+import { WebChatWidget } from "@/components/webchat/WebChatWidget";
+import { company } from "@/config/company";
+import { legalDocuments } from "@/config/legal";
 
 // Направления формы и соответствие страниц услуг направлениям — для всплывающей формы.
 const serviceOptions = services.map((service) => ({ value: service.slug, label: service.title }));
@@ -25,6 +28,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       <SiteFooter />
       <CookieNotice />
       <AttributionCapture />
+      <WebChatWidget workingHours={company.contacts.workingHours} policyHref={legalDocuments.policy.href} />
     </RequestModalProvider>
   );
 }

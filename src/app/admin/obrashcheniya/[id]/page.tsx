@@ -9,6 +9,7 @@ import { getAdapter } from "@/lib/chat/registry";
 import {
   getChatClient,
   listChatMessages,
+  markOperatorRead,
   listChatNotes,
   listLinkedClients,
   searchLinkCandidates,
@@ -19,6 +20,7 @@ import {
 } from "@/lib/chat/repository";
 import { channelLabels, chatDisplayName } from "@/lib/chat/types";
 import { formatMoscowDateTime } from "@/lib/requests/csv";
+import { isVisitorOnline } from "@/lib/webchat/presence";
 import { listRequestsByChatClient, type RequestListItem } from "@/lib/requests/repository";
 import { AutoRefresh } from "@/components/admin/chat/AutoRefresh";
 import { ChannelBadge, DialogBadges } from "@/components/admin/chat/badges";
@@ -114,9 +116,29 @@ function Attachments({ items }: { items: ChatMessageRecord["attachments"] }) {
   );
 }
 
-function MessageBubble({ message, clientId, clientName }: { message: ChatMessageRecord; clientId: string; clientName: string }) {
+function MessageBubble({
+  message,
+  clientId,
+  clientName,
+  visitorReadAt,
+}: {
+  message: ChatMessageRecord;
+  clientId: string;
+  clientName: string;
+  /** Веб-чат: когда посетитель последний раз видел ответы (undefined — другой канал). */
+  visitorReadAt?: Date | null;
+}) {
   const incoming = message.direction === "in";
-  const author = incoming ? clientName : message.author === "operator" ? "Оператор" : "Бот";
+  const web = visitorReadAt !== undefined;
+  // В веб-чате посетитель видит ответ от имени «Анастасия»; здесь сохраняется фактический автор — оператор.
+  const author = incoming ? clientName : message.author === "operator" ? (web ? "Оператор (для посетителя — «Анастасия»)" : "Оператор") : "Бот";
+  const shownAt = message.sentAt ?? message.createdAt;
+  const statusText =
+    web && message.status === "sent"
+      ? visitorReadAt && visitorReadAt >= shownAt
+        ? "Показано посетителю · прочитано"
+        : "Показано посетителю в чате на сайте"
+      : sendStatusText[message.status];
   const system = incoming && (message.kind === "start" || message.kind === "stop" || message.kind === "callback");
   return (
     <li className={`flex ${incoming ? "justify-start" : "justify-end"}`}>
@@ -147,7 +169,7 @@ function MessageBubble({ message, clientId, clientName }: { message: ChatMessage
                 : "opacity-70"
             }`}
           >
-            {sendStatusText[message.status]}
+            {statusText}
             {message.error ? `: ${message.error}` : ""}
           </p>
         ) : null}
@@ -165,6 +187,8 @@ async function load(id: string, before: string | null, linkQuery: string) {
   try {
     const client = await getChatClient(id);
     if (!client) return { client: null };
+    // Оператор открыл диалог — входящие до этого момента прочитаны (обновляется и при автообновлении страницы).
+    if (!before) await markOperatorRead(id);
     const [messages, notes, requests, linked, candidates] = await Promise.all([
       listChatMessages(id, before),
       listChatNotes(id),
@@ -219,7 +243,9 @@ export default async function AdminChatDialogPage({ params, searchParams }: Prop
   };
 
   const label = channelLabels[client.channel];
-  const name = chatDisplayName(client) || "Без имени";
+  const web = client.channel === "web";
+  const name = chatDisplayName(client) || (web ? `Посетитель сайта № ${client.externalUserId}` : "Без имени");
+  const visitorOnline = web && isVisitorOnline(client.visitorActiveAt);
   const enabled = getAdapter(client.channel).isEnabled();
   const disabledReason = !enabled
     ? `${label} не настроен на сервере — отправка недоступна. См. «Настройки каналов».`
@@ -266,18 +292,38 @@ export default async function AdminChatDialogPage({ params, searchParams }: Prop
     },
   ];
 
+  // Веб-чат: другие сведения — посетитель известен только по номеру сессии, источнику и согласию.
+  const webInfo: { label: string; value: ReactNode }[] = [
+    { label: "Канал", value: "Онлайн-чат на сайте (для посетителя консультант — «Анастасия»)" },
+    { label: "Посетитель", value: `гость, № ${client.externalUserId} (имя и контакты не запрашивались)` },
+    { label: "Телефон (указал клиент)", value: client.phone || "—" },
+    { label: "Страница, с которой начат чат", value: client.source ?? "не определена" },
+    { label: "Начало диалога", value: formatMoscowDateTime(client.firstSeenAt) },
+    { label: "Последнее сообщение", value: client.lastMessageAt ? formatMoscowDateTime(client.lastMessageAt) : "—" },
+    {
+      label: "Активность посетителя",
+      value: visitorOnline ? "сейчас в чате" : client.visitorActiveAt ? `был ${formatMoscowDateTime(client.visitorActiveAt)}` : "—",
+    },
+    { label: "Посетитель видел ответы", value: client.visitorReadAt ? formatMoscowDateTime(client.visitorReadAt) : "ещё нет" },
+    {
+      label: "Согласие на обработку ПД",
+      value: client.consentAt ? `Дано в веб-чате ${formatMoscowDateTime(client.consentAt)}, редакция от ${client.consentRevision}` : "Не давалось",
+    },
+  ];
+
   return (
     <div className="container-page mt-8 lg:mt-10">
-      <AutoRefresh />
-      <Link href="/admin/obrashcheniya" className="inline-flex items-center gap-2 text-[0.9375rem] font-medium text-ink hover:text-bronze-deep">
+      <AutoRefresh intervalMs={web ? 3_000 : 10_000} />
+      <Link href={web ? "/admin/veb-chat" : "/admin/obrashcheniya"} className="inline-flex items-center gap-2 text-[0.9375rem] font-medium text-ink hover:text-bronze-deep">
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-        Все обращения
+        {web ? "Веб-чат" : "Все обращения"}
       </Link>
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <h1 className="text-[1.75rem] leading-tight">{name}</h1>
         <ChannelBadge channel={client.channel} />
-        <DialogBadges status={client.status} mode={client.mode} needsReply={client.needsReply} botBlocked={client.botBlocked} />
+        <DialogBadges status={client.status} mode={client.mode} needsReply={client.needsReply} botBlocked={client.botBlocked} showMode={!web} />
+        {visitorOnline ? <span className="text-[0.8125rem] font-medium text-success">● посетитель в чате</span> : null}
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-12">
@@ -315,13 +361,29 @@ export default async function AdminChatDialogPage({ params, searchParams }: Prop
               ) : (
                 <ol className="space-y-3" aria-label="Сообщения по времени">
                   {messages.items.map((message) => (
-                    <MessageBubble key={message.id} message={message} clientId={client.id} clientName={name} />
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      clientId={client.id}
+                      clientName={web ? "Посетитель" : name}
+                      visitorReadAt={web ? client.visitorReadAt : undefined}
+                    />
                   ))}
                 </ol>
               )}
             </ChatScroller>
             <div id="reply-section" className="shrink-0 border-t border-line px-4 py-4 sm:px-5">
-              <ReplyForm clientId={client.id} channelLabel={label} disabledReason={disabledReason} />
+              <ReplyForm
+                clientId={client.id}
+                channelLabel={web ? "чат на сайте" : label}
+                disabledReason={disabledReason}
+                typingSignal={web}
+                hint={
+                  web
+                    ? "Посетитель увидит ответ в окне чата на сайте от имени «Анастасия». Ctrl+Enter — отправить. Не запрашивайте паспортные данные и реквизиты."
+                    : undefined
+                }
+              />
             </div>
           </section>
         </div>
@@ -335,11 +397,12 @@ export default async function AdminChatDialogPage({ params, searchParams }: Prop
               needsReply={client.needsReply}
               qualified={client.qualifiedAt !== null}
               hasRequest={requests.length > 0}
+              showMode={!web}
             />
           </Section>
           <Section id="client" title="Клиент">
             <dl className="divide-y divide-line border-t border-line">
-              {info.map((row) => (
+              {(web ? webInfo : info).map((row) => (
                 <div key={row.label} className="grid gap-1 py-2.5 sm:grid-cols-[11rem_1fr] sm:gap-3">
                   <dt className="text-[0.8125rem] text-muted">{row.label}</dt>
                   <dd className="min-w-0 text-[0.9375rem] break-words text-ink">{row.value}</dd>

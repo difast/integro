@@ -28,7 +28,43 @@ function writeDraft(clientId: string, value: string) {
  * Черновик хранится в sessionStorage этой вкладки (по карточке клиента): автообновление страницы,
  * переход в другой раздел или перезагрузка не стирают набранный текст. Закрытие вкладки — стирает.
  */
-export function ReplyForm({ clientId, channelLabel, disabledReason }: { clientId: string; channelLabel: string; disabledReason: string | null }) {
+/** Сигнал «оператор печатает» для веб-чата: не чаще раза в TYPING_THROTTLE_MS, снимается при очистке поля и уходе из него. */
+const TYPING_THROTTLE_MS = 2500;
+function sendTyping(clientId: string, typing: boolean) {
+  void fetch("/api/admin/webchat/typing", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ clientId, typing }),
+  }).catch(() => undefined);
+}
+
+export function ReplyForm({
+  clientId,
+  channelLabel,
+  disabledReason,
+  typingSignal = false,
+  hint,
+}: {
+  clientId: string;
+  channelLabel: string;
+  disabledReason: string | null;
+  /** Веб-чат: передавать посетителю «Анастасия печатает…», пока оператор набирает ответ. */
+  typingSignal?: boolean;
+  hint?: string;
+}) {
+  const lastTyping = useRef(0);
+  const signalTyping = (value: string) => {
+    if (!typingSignal) return;
+    const now = Date.now();
+    if (!value.trim()) {
+      if (lastTyping.current) sendTyping(clientId, false);
+      lastTyping.current = 0;
+      return;
+    }
+    if (now - lastTyping.current < TYPING_THROTTLE_MS) return;
+    lastTyping.current = now;
+    sendTyping(clientId, true);
+  };
   const [state, action, pending] = useActionState(sendReply, initial);
   const [key, setKey] = useState(() => crypto.randomUUID());
   const [text, setText] = useState("");
@@ -75,6 +111,11 @@ export function ReplyForm({ clientId, channelLabel, disabledReason }: { clientId
         onChange={(event) => {
           setText(event.target.value);
           writeDraft(clientId, event.target.value);
+          signalTyping(event.target.value);
+        }}
+        onBlur={() => {
+          if (typingSignal && lastTyping.current) sendTyping(clientId, false);
+          lastTyping.current = 0;
         }}
         onFocus={(event) => {
           // На телефоне экранная клавиатура появляется с задержкой — после неё возвращаем поле в видимую область.
@@ -92,8 +133,8 @@ export function ReplyForm({ clientId, channelLabel, disabledReason }: { clientId
       <ActionMessage state={state} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p id="reply-hint" className="max-w-md text-[0.75rem] text-muted">
-          Уйдёт от имени бота; диалог перейдёт в режим оператора. Ctrl+Enter — отправить. Не запрашивайте паспортные
-          данные и реквизиты. <span className="tabular-nums">{text.length}/{REPLY_MAX_LENGTH}</span>
+          {hint ?? "Уйдёт от имени бота; диалог перейдёт в режим оператора. Ctrl+Enter — отправить. Не запрашивайте паспортные данные и реквизиты."}{" "}
+          <span className="tabular-nums">{text.length}/{REPLY_MAX_LENGTH}</span>
         </p>
         <button type="submit" disabled={pending || !text.trim()} className={buttonClass("primary", "min-h-11 px-5")}>
           {pending ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Send aria-hidden="true" className="h-4 w-4" />}
