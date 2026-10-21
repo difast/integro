@@ -246,3 +246,38 @@
   cursor: url("/cursors/pointer.svg") 9 2, pointer;
   cursor: -webkit-image-set(url("/cursors/pointer.png") 1x, url("/cursors/pointer@2x.png") 2x) 9 2, pointer;
 }
+
+/*
+ * Карта субъектов РФ на главной (src/components/sections/RussiaMap.tsx). Регионы закрашиваются фирменным
+ * цветом с запада на восток (--i — порядок региона), один раз; при prefers-reduced-motion — без анимации.
+ */
+.russia-map path {
+  fill: var(--color-dark);
+  stroke: #ffffff;
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transition: fill 0.18s ease;
+}
+.russia-map[data-reveal="pending"] path {
+  fill: var(--color-mist-deep);
+  transition: none;
+}
+.russia-map[data-reveal="in"] path {
+  transition: fill 0.6s cubic-bezier(0.33, 1, 0.68, 1) calc(var(--i) * 18ms);
+}
+@media (hover: hover) {
+  .russia-map path:hover {
+    fill: var(--color-bronze);
+  }
+}
+.russia-map path[data-selected] {
+  fill: var(--color-bronze-deep);
+}
+@media (prefers-reduced-motion: reduce) {
+  .russia-map path,
+  .russia-map[data-reveal="in"] path {
+    transition: none;
+  }
+}

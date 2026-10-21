@@ -27,6 +27,15 @@ describe("validateRequest", () => {
   });
 });
 
+describe("контекст: регион с карты", () => {
+  it("известный код субъекта подставляется названием, неизвестный игнорируется", () => {
+    expect(describeRequestContext("/?region=RU-KGD&forma=okno")).toBe("Всплывающая форма; Регион на карте: Калининградская область");
+    expect(describeRequestContext("/kontakty?region=RU-SEV")).toBe("Регион на карте: Севастополь");
+    expect(describeRequestContext("/kontakty?region=<script>")).toBeNull();
+    expect(describeRequestContext("/kontakty?region=constructor")).toBeNull();
+  });
+});
+
 describe("describeRequestContext", () => {
   it("describes helper recommendation and service page", () => {
     expect(describeRequestContext("/kontakty?usluga=ocenka-kvartiry&rekomendaciya=otchet&obekt=realty")).toBe(

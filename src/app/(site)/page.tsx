@@ -18,6 +18,7 @@ import { CompanyVideo } from "@/components/sections/CompanyVideo";
 import { CtaBand } from "@/components/sections/CtaBand";
 import { HeroVisual } from "@/components/sections/HeroVisual";
 import { ProcessSteps } from "@/components/sections/ProcessSteps";
+import { RussiaMap } from "@/components/sections/RussiaMap";
 
 export const metadata: Metadata = {
   alternates: getSiteUrl() ? { canonical: "/" } : undefined,
@@ -273,6 +274,9 @@ export default function HomePage() {
           ))}
         </ul>
       </section>
+
+      {/* География: карта субъектов РФ — обращения принимаются из любого региона. */}
+      <RussiaMap />
 
       {articles.length > 0 ? (
         <section aria-labelledby="articles-title" className="container-page mt-20 lg:mt-28">

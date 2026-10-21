@@ -1,6 +1,7 @@
 import { objectCodes, objectLabels, type ObjectType } from "@/lib/document-helper";
 import { getServicePage } from "@/config/service-pages";
 import { getService } from "@/config/services";
+import { russiaRegionNames } from "@/data/russia-region-names";
 
 /**
  * Контекст обращения по адресу страницы с формой: с какой страницы услуги пришёл
@@ -42,6 +43,10 @@ export function describeRequestContext(sourcePage: string | null): string | null
   const fromPath = serviceTitle(pathSlug);
   const title = fromParam ?? fromPath;
   if (title) parts.push(`Страница услуги: ${title}`);
+
+  // Регион, выбранный на карте на главной (только известные коды субъектов).
+  const region = params.get("region");
+  if (region && Object.hasOwn(russiaRegionNames, region)) parts.push(`Регион на карте: ${russiaRegionNames[region]}`);
 
   return parts.length > 0 ? parts.join("; ").slice(0, 300) : null;
 }
