@@ -71,6 +71,8 @@ export type Company = {
   social: SocialLink[];
   /** Год, с которого указывается копирайт. null — только текущий год. */
   copyrightSince: number | null;
+  /** Год начала работы компании (schema.org foundingDate). null — не выводится. */
+  foundedYear: number | null;
   /**
    * Дата размещения на сайте текущей редакции юридических документов
    * (политика, согласие). Это не дата утверждения — см. LEGAL_REVIEW.md.
@@ -110,6 +112,7 @@ export const company: Company = {
     director: null,
   },
   social: [],
-  copyrightSince: null,
+  copyrightSince: 2025,
+  foundedYear: 2025,
   legalRevisionDate: "21.10.2026",
 };

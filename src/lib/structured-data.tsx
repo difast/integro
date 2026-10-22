@@ -22,6 +22,7 @@ export function organizationJsonLd(): Record<string, unknown> | null {
     identifier: { "@type": "PropertyValue", propertyID: "ОГРН", value: requisites.ogrn },
     address: { "@type": "PostalAddress", streetAddress: requisites.legalAddress, addressLocality: "Москва", addressCountry: "RU" },
     areaServed: "RU",
+    ...(company.foundedYear ? { foundingDate: String(company.foundedYear) } : {}),
   };
 }
 

@@ -263,7 +263,11 @@ export default function LawyersPage() {
                   </li>
                 ))}
               </ul>
-              <p className="mt-6 max-w-[42rem] text-[0.875rem] leading-relaxed text-on-dark">
+              <p className="mt-6 max-w-[42rem] text-[1.0625rem] leading-relaxed text-on-dark">
+                По запросу выдаём письмо о возможности проведения экспертизы по предлагаемым вопросам — его можно
+                приложить к ходатайству.
+              </p>
+              <p className="mt-4 max-w-[42rem] text-[0.875rem] leading-relaxed text-on-dark">
                 Обращение к нам не означает, что суд назначит экспертизу или поручит её нашей организации: эти решения
                 принимает суд.
               </p>

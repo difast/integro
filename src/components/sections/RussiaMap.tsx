@@ -18,7 +18,7 @@ export function RussiaMap() {
           id="geography-title"
           eyebrow="География"
           title="Работаем с заказчиками по всей России"
-          lead="Принимаем обращения из любого субъекта Российской Федерации. Выберите свой регион — и оставьте заявку."
+          lead="Принимаем обращения из любого субъекта Российской Федерации и выезжаем на осмотр по всей России. Выберите свой регион — и оставьте заявку."
         />
         <RussiaMapInteractive regions={options}>
           <svg viewBox={RUSSIA_VIEWBOX} className="block h-auto w-full" role="img" aria-label="Карта России: 89 субъектов Российской Федерации">
