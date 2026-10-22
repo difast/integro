@@ -52,7 +52,7 @@
 - [x] `phone` — +7 (936) 313-32-02 (добавлен 19.10.2026);
 - [x] `messengers` — WhatsApp (wa.me/79363133202);
 - [x] Telegram — бот компании @IntSoftHoldingBot (`https://t.me/IntSoftHoldingBot?start=site`, 21.10.2026);
-- [x] MAX — чат-бот @id9734021152_bot (https://max.ru/id9734021152_bot); значок нарисован по фирменному виду — при наличии заменить на официальный SVG из брендбука MAX;
+- [x] MAX — чат-бот @id9734021152_bot (https://max.ru/id9734021152_bot); значок — официальный SVG (`public/brand/max-logo.svg`);
 - [x] `officeAddress` — адрес офиса для посетителей, если отличается от юридического. — не публикуется (решение владельца).
 - [x] Чат-бот MAX: задать `MAX_BOT_TOKEN` и `MAX_WEBHOOK_SECRET` в Timeweb, зарегистрировать Webhook в
   «Настройках MAX» и пройти проверку из `MAX_INTEGRATION.md` (раздел 4); до приёма заявок через бота —
