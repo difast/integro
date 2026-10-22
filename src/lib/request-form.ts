@@ -8,7 +8,7 @@ export type RequestFields = {
   message: string;
 };
 
-export type RequestFieldName = keyof RequestFields | "consent";
+export type RequestFieldName = keyof RequestFields | "consent" | "files";
 
 export type RequestFormState = {
   status: "idle" | "success" | "error";

@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { company } from "@/config/company";
 import { services } from "@/config/services";
 import { getClientIp } from "@/lib/client-ip";
-import { describeDbError, isDatabaseConfigured } from "@/lib/db";
+import { describeDbError, isDatabaseConfigured, withTransaction } from "@/lib/db";
 import { isMailConfigured, sendMail } from "@/lib/mail";
 import { isRateLimited } from "@/lib/rate-limit";
 import { limits, validateRequest, type RequestFields, type RequestFormState } from "@/lib/request-form";
@@ -14,6 +14,7 @@ import { notify } from "@/lib/notifications/service";
 import { markError, markOk } from "@/lib/ops/monitor";
 import { recordRequestCreated } from "@/lib/requests/history";
 import { createRequest, isUuid } from "@/lib/requests/repository";
+import { prepareUploads, saveRequestFiles, type PreparedFile } from "@/lib/requests/files";
 import { parseAttribution } from "@/lib/requests/attribution";
 import { absoluteUrl } from "@/lib/site";
 
@@ -62,6 +63,14 @@ export async function submitRequest(_prev: RequestFormState, formData: FormData)
       : services.find((service) => service.slug === values.service)?.title;
   if (!serviceTitle) fieldErrors.service = "Выберите направление из списка";
 
+  // Файлы необязательны; проверяются только если приложены (число, размер, формат и содержимое).
+  let files: PreparedFile[] = [];
+  if (Object.keys(fieldErrors).length === 0) {
+    const upload = await prepareUploads(formData.getAll("files"));
+    if ("error" in upload) fieldErrors.files = upload.error;
+    else files = upload.files;
+  }
+
   if (Object.keys(fieldErrors).length > 0) {
     return { status: "error", message: "Проверьте заполнение формы.", fieldErrors, values };
   }
@@ -79,6 +88,16 @@ export async function submitRequest(_prev: RequestFormState, formData: FormData)
 
   // Ключ отправки создаётся в браузере при открытии формы: повторная отправка той же
   // заявки (двойное нажатие, повтор после сбоя сети) не создаёт дубликат.
+  // Файлы хранятся только в базе: без неё заявку можно отправить письмом, но без вложений.
+  if (files.length > 0 && !databaseEnabled) {
+    return {
+      status: "error",
+      message: "Прикрепить файлы сейчас нельзя. Отправьте заявку без файлов — мы запросим документы после ответа.",
+      fieldErrors: { files: "Отправьте заявку без файлов" },
+      values,
+    };
+  }
+
   const submissionKey = field(formData, "submissionKey", 36);
   if (!isUuid(submissionKey)) {
     return { status: "error", message: "Не удалось отправить заявку. Обновите страницу и попробуйте ещё раз.", values };
@@ -98,7 +117,7 @@ export async function submitRequest(_prev: RequestFormState, formData: FormData)
   let isNew = true;
   if (databaseEnabled) {
     try {
-      const saved = await createRequest({
+      const input = {
         submissionKey,
         name: values.name,
         phone: values.phone,
@@ -110,6 +129,13 @@ export async function submitRequest(_prev: RequestFormState, formData: FormData)
         context,
         consentRevision: company.legalRevisionDate,
         attribution: parseAttribution(formData.get("attribution")),
+      };
+      // Заявка и её файлы сохраняются вместе: при сбое не останется заявки без вложений или вложений без заявки.
+      // Повторная отправка той же заявки (тот же ключ) файлы не дублирует.
+      const saved = await withTransaction(async (db) => {
+        const result = await createRequest(input, db);
+        if (result.created && files.length > 0) await saveRequestFiles(db, result.id, files);
+        return result;
       });
       requestId = saved.id;
       isNew = saved.created;
@@ -145,6 +171,7 @@ export async function submitRequest(_prev: RequestFormState, formData: FormData)
       `Email: ${values.email || "—"}`,
       `Направление: ${serviceTitle}`,
       ...(context ? [`Контекст: ${context}`] : []),
+      ...(files.length > 0 ? [`Приложено файлов: ${files.length} (скачать можно в панели администратора)`] : []),
       "",
       "Описание задачи:",
       values.message,

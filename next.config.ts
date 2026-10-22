@@ -5,6 +5,12 @@ const nextConfig: NextConfig = {
   // При обычном запуске через `npm start` переменная не задаётся.
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   poweredByHeader: false,
+  experimental: {
+    serverActions: {
+      // Форма заявки принимает файлы: до 20 МБ вместе (src/lib/request-files.ts) плюс запас на разметку multipart.
+      bodySizeLimit: "21mb",
+    },
+  },
   images: {
     formats: ["image/avif", "image/webp"],
   },

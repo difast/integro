@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import { submitRequest } from "@/app/(site)/kontakty/actions";
 import { initialRequestState, validateRequest, type RequestFieldName } from "@/lib/request-form";
+import { validateFileList } from "@/lib/request-files";
 import { readAttribution } from "@/lib/requests/attribution";
 
 function newSubmissionKey(): string {
@@ -15,7 +16,10 @@ function newSubmissionKey(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-const fieldOrder: RequestFieldName[] = ["name", "phone", "email", "message", "consent"];
+const fieldOrder: RequestFieldName[] = ["name", "phone", "email", "message", "files", "consent"];
+
+/** Непустые файлы из поля «Прикрепить файлы» (без выбора браузер присылает пустую запись). */
+const attachedFiles = (data: FormData) => data.getAll("files").filter((entry): entry is File => typeof entry !== "string" && entry.size > 0);
 
 /**
  * Общая логика формы заявки (страница «Контакты» и всплывающее окно):
@@ -33,6 +37,8 @@ export function useRequestForm({ idPrefix = "", pageParams }: { idPrefix?: strin
   const formRef = useRef<HTMLFormElement>(null);
   // Ошибки проверки в браузере: при них форма не отправляется на сервер.
   const [clientErrors, setClientErrors] = useState<Partial<Record<RequestFieldName, string>> | null>(null);
+  // Сколько файлов было в последней отправке: после ошибки на сервере поле очищено, их нужно выбрать заново.
+  const [submittedFiles, setSubmittedFiles] = useState(0);
 
   // Время открытия формы — для серверной проверки от автоматической отправки.
   // Хранится вне DOM: React сбрасывает поля формы после каждого действия.
@@ -51,6 +57,7 @@ export function useRequestForm({ idPrefix = "", pageParams }: { idPrefix?: strin
     const query = params.toString();
     formData.set("page", `${window.location.pathname}${query ? `?${query}` : ""}`);
     formData.set("attribution", readAttribution());
+    setSubmittedFiles(attachedFiles(formData).length);
     formAction(formData);
   };
 
@@ -63,6 +70,8 @@ export function useRequestForm({ idPrefix = "", pageParams }: { idPrefix?: strin
       { name: text("name"), phone: text("phone"), email: text("email"), message: text("message") },
       data.get("consent") === "on",
     );
+    const filesError = validateFileList(attachedFiles(data).map((file) => ({ name: file.name, size: file.size })));
+    if (filesError) found.files = filesError;
     if (Object.keys(found).length > 0) {
       event.preventDefault();
       setClientErrors(found);
@@ -101,5 +110,6 @@ export function useRequestForm({ idPrefix = "", pageParams }: { idPrefix?: strin
     fieldsKey: `${state.status}-${JSON.stringify(values)}`,
     success: state.status === "success" && !clientErrors,
     errorMessage: clientErrors ? "Проверьте заполнение формы." : state.status === "error" ? state.message : undefined,
+    filesNeedReselect: state.status === "error" && !clientErrors && submittedFiles > 0,
   };
 }

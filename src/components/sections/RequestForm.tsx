@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertCircle, ArrowRight, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
 import { limits } from "@/lib/request-form";
 import { useRequestForm } from "@/components/request/useRequestForm";
+import { FileField } from "@/components/request/FileField";
 import { company } from "@/config/company";
 import { legalDocuments } from "@/config/legal";
 import { ConsentBody } from "@/content/legal/consent";
@@ -41,7 +42,7 @@ export function RequestForm({
   showSetupHint = false,
   hasContacts = false,
 }: RequestFormProps) {
-  const { state, pending, submit, handleSubmit, clientErrors, errors, values, errorProps, statusRef, formRef, fieldsKey } =
+  const { state, pending, submit, handleSubmit, clientErrors, errors, values, errorProps, statusRef, formRef, fieldsKey, filesNeedReselect } =
     useRequestForm();
 
   return (
@@ -182,6 +183,8 @@ export function RequestForm({
           <FieldError id="message-error" message={errors.message} />
         </div>
 
+        <FileField id="files" error={errors.files} reselect={filesNeedReselect} />
+
         {/* Ловушка для ботов: поле скрыто от пользователей и вспомогательных технологий. */}
         <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
           <label htmlFor="website">Не заполняйте это поле</label>
@@ -189,8 +192,8 @@ export function RequestForm({
         </div>
 
         <p className="text-[0.875rem] leading-relaxed text-muted">
-          Не указывайте в заявке паспортные данные, сведения о здоровье и персональные данные третьих лиц — они не
-          нужны для предварительного анализа задачи.
+          Не указывайте в заявке и не прикладывайте паспортные данные, сведения о здоровье и персональные данные
+          третьих лиц — они не нужны для предварительного анализа задачи.
         </p>
 
         {/* Согласие оформлено отдельно: одно поле, без предварительной отметки и без иных подтверждений. */}

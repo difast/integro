@@ -116,8 +116,9 @@ test.describe("телефон", () => {
   test.use({ viewport: { width: 360, height: 740 }, hasTouch: true, isMobile: true });
   test("карта целиком в ширину экрана, нажатие на регион, без горизонтальной прокрутки", async ({ page }) => {
     await page.goto("/");
-    await page.locator("#geography-title").scrollIntoViewIfNeeded();
     const map = page.getByTestId("russia-map");
+    // Прокручиваем к самой карте: над ней заголовок и подзаголовок, их высота зависит от текста.
+    await map.scrollIntoViewIfNeeded();
     const box = (await map.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(360);

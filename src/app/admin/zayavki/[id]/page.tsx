@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, Paperclip } from "lucide-react";
 import { requireAdminPage } from "@/lib/admin/auth";
 import { describeDbError } from "@/lib/db";
 import { formatMoscowDateTime } from "@/lib/requests/csv";
@@ -10,6 +10,8 @@ import { describeAttribution } from "@/lib/requests/attribution";
 import { channelLabel, paymentLabel, stageLabel } from "@/lib/requests/funnel";
 import { listRequestHistory, type HistoryRecord } from "@/lib/requests/history";
 import { requestNumberOf } from "@/lib/requests/number";
+import { listRequestFiles, type RequestFileInfo } from "@/lib/requests/files";
+import { formatFileSize } from "@/lib/request-files";
 import { getRequest, listAssignees, listLossReasons, type LossReason, type RequestRecord } from "@/lib/requests/repository";
 import { statusLabel } from "@/lib/requests/statuses";
 import { DeleteRequest } from "@/components/admin/RequestEditor";
@@ -60,10 +62,17 @@ export default async function AdminRequestPage({ params, searchParams }: Props) 
   let reasons: LossReason[] = [];
   let assignees: string[] = [];
   let directions: SalesDirection[] = [];
+  let files: RequestFileInfo[] = [];
   try {
     request = await getRequest(id);
     if (request)
-      [history, reasons, assignees, directions] = await Promise.all([listRequestHistory(request.id), listLossReasons(true), listAssignees(), listDirections()]);
+      [history, reasons, assignees, directions, files] = await Promise.all([
+        listRequestHistory(request.id),
+        listLossReasons(true),
+        listAssignees(),
+        listDirections(),
+        listRequestFiles(request.id),
+      ]);
   } catch (error) {
     console.error("[admin] failed to load request:", describeDbError(error));
     return (
@@ -170,6 +179,35 @@ export default async function AdminRequestPage({ params, searchParams }: Props) 
             </h2>
             <p className="mt-4 whitespace-pre-wrap break-words text-ink">{request.message}</p>
           </section>
+          {files.length > 0 ? (
+            <section aria-labelledby="request-files" className="rounded-[var(--radius-card)] bg-white p-6 sm:p-8">
+              <h2 id="request-files" className="text-[0.875rem] font-medium text-muted">
+                Файлы клиента ({files.length})
+              </h2>
+              <ul className="mt-4 divide-y divide-line border-t border-line">
+                {files.map((file) => (
+                  <li key={file.id} className="flex items-center gap-3 py-3">
+                    <Paperclip aria-hidden="true" className="h-4 w-4 shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1 break-all text-ink">{file.name}</span>
+                    <span className="shrink-0 text-[0.875rem] text-muted">{formatFileSize(file.size)}</span>
+                    {/* Обычная ссылка, а не Link: файл отдаётся как вложение, предзагрузка не нужна. */}
+                    <a
+                      href={`/api/admin/requests/${request.id}/files/${file.id}`}
+                      download
+                      className="inline-flex min-h-11 shrink-0 items-center gap-1.5 text-[0.9375rem] font-medium text-link"
+                      aria-label={`Скачать ${file.name}`}
+                    >
+                      <Download aria-hidden="true" className="h-4 w-4" />
+                      Скачать
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-[0.8125rem] text-muted">
+                Файлы прислал клиент: открывайте их с той же осторожностью, что и вложения в письмах.
+              </p>
+            </section>
+          ) : null}
         </div>
 
         <div className="min-w-0 space-y-4 lg:col-span-5">

@@ -443,4 +443,22 @@ export const migrations: Migration[] = [
         CHECK (channel IN ('site', 'max', 'telegram', 'web', 'whatsapp', 'avito', 'phone', 'email', 'other'));
     `,
   },
+  {
+    // Файлы, приложенные к заявке с сайта (необязательно). Удаляются вместе с заявкой.
+    // Ограничения размера дублируют проверку в src/lib/request-files.ts.
+    id: "010_request_files",
+    sql: `
+      CREATE TABLE request_files (
+        id          bigserial PRIMARY KEY,
+        request_id  uuid NOT NULL REFERENCES requests (id) ON DELETE CASCADE,
+        file_name   text NOT NULL CHECK (char_length(file_name) BETWEEN 1 AND 200),
+        mime        text NOT NULL,
+        size_bytes  integer NOT NULL CHECK (size_bytes > 0 AND size_bytes <= 10485760),
+        sha256      text NOT NULL CHECK (sha256 ~ '^[0-9a-f]{64}$'),
+        data        bytea NOT NULL,
+        created_at  timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX request_files_request_idx ON request_files (request_id);
+    `,
+  },
 ];

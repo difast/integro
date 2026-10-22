@@ -18,6 +18,7 @@ import { company } from "@/config/company";
 import { legalDocuments } from "@/config/legal";
 import { limits } from "@/lib/request-form";
 import { buttonClass } from "@/components/ui/Button";
+import { FileList, FileTrigger, useFileSelection } from "./FileField";
 import { useRequestForm } from "./useRequestForm";
 
 type ServiceOption = { value: string; label: string };
@@ -132,11 +133,12 @@ function RequestDialogForm({
   onClose: () => void;
 }) {
   const p = "rq-";
-  const { pending, submit, handleSubmit, errors, values, errorProps, statusRef, formRef, fieldsKey, success, errorMessage } =
+  const { pending, submit, handleSubmit, errors, values, errorProps, statusRef, formRef, fieldsKey, success, errorMessage, filesNeedReselect } =
     useRequestForm({ idPrefix: p, pageParams });
   // Ошибки полей показываются у полей; общая плашка — только для ошибок без привязки к полю.
   const hasFieldErrors = Object.keys(errors).length > 0;
   const contactError = errors.phone ?? errors.email;
+  const files = useFileSelection();
 
   if (success) {
     return (
@@ -263,9 +265,15 @@ function RequestDialogForm({
         </div>
 
         <div>
-          <label htmlFor={`${p}message`} className={labelClass}>
-            Опишите задачу <span className="text-bronze-deep" aria-hidden="true">*</span>
-          </label>
+          {/* Кнопка «Прикрепить файлы» — в строке подписи: так окно помещается в экран телефона. */}
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor={`${p}message`} className={labelClass}>
+              Опишите задачу <span className="text-bronze-deep" aria-hidden="true">*</span>
+            </label>
+            <span className="shrink-0">
+              <FileTrigger id={`${p}files`} selection={files} error={errors.files} compact />
+            </span>
+          </div>
           <textarea
             id={`${p}message`}
             name="message"
@@ -277,6 +285,7 @@ function RequestDialogForm({
             {...errorProps("message")}
           />
           <FieldError id={`${p}message-error`} message={errors.message} />
+          <FileList id={`${p}files`} selection={files} error={errors.files} reselect={filesNeedReselect} compact />
         </div>
 
         {/* Ловушка для ботов: поле скрыто от пользователей и вспомогательных технологий. */}

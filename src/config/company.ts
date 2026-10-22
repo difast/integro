@@ -114,5 +114,5 @@ export const company: Company = {
   social: [],
   copyrightSince: 2025,
   foundedYear: 2025,
-  legalRevisionDate: "21.10.2026",
+  legalRevisionDate: "22.10.2026",
 };

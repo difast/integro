@@ -35,8 +35,13 @@ export const BACKUP_TABLES = [
   "sales_plans",
 ] as const;
 
-/** Не копируются: сессии и попытки входа (восстанавливать их небезопасно), одноразовые коды, служебная таблица миграций. */
-export const EXCLUDED_TABLES = ["admin_sessions", "admin_login_attempts", "admin_link_codes", "schema_migrations"] as const;
+/**
+ * Не копируются: сессии и попытки входа (восстанавливать их небезопасно), одноразовые коды, служебная таблица миграций.
+ * Файлы заявок (request_files) тоже не входят в копию: выгрузка собирается в памяти, а файлы могут занимать сотни
+ * мегабайт. Они сохраняются резервными копиями самой базы у хостинга; при восстановлении из копии сайта
+ * файлы заявок, которые есть в копии, остаются на месте (см. restoreTables).
+ */
+export const EXCLUDED_TABLES = ["admin_sessions", "admin_login_attempts", "admin_link_codes", "schema_migrations", "request_files"] as const;
 
 const MAGIC = Buffer.from("INTEGROBK1");
 
@@ -143,6 +148,9 @@ export async function restoreTables(client: ClientBase, gz: Buffer): Promise<Res
   await applyMigrations(client);
   await client.query("BEGIN");
   try {
+    // Файлы заявок не входят в копию, а очистка requests удалила бы их каскадом: откладываем их во временную
+    // таблицу и после загрузки возвращаем те, чьи заявки есть в копии.
+    await client.query("CREATE TEMP TABLE keep_request_files ON COMMIT DROP AS SELECT * FROM request_files");
     await client.query(`TRUNCATE ${BACKUP_TABLES.join(", ")} RESTART IDENTITY CASCADE`);
     let table: string | null = null;
     let batch: string[] = [];
@@ -166,6 +174,10 @@ export async function restoreTables(client: ClientBase, gz: Buffer): Promise<Res
       if (batch.length >= 500) await flush();
     }
     await flush();
+    await client.query("INSERT INTO request_files SELECT * FROM keep_request_files WHERE request_id IN (SELECT id FROM requests)");
+    await client.query(
+      "SELECT setval(pg_get_serial_sequence('request_files', 'id'), coalesce((SELECT max(id) FROM request_files), 1), (SELECT max(id) IS NOT NULL FROM request_files))",
+    );
     // Счётчики идентификаторов — после максимальных восстановленных значений.
     for (const name of BACKUP_TABLES) {
       const { rows: idColumn } = await client.query(
