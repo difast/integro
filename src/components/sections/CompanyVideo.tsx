@@ -16,7 +16,8 @@ type CompanyVideoProps = {
 /**
  * Ролик о компании. Воспроизводится без звука, только когда виден на экране,
  * и не запускается сам, если пользователь отключил анимацию в системе.
- * Субтитры вшиты в видео, поэтому ролик понятен и без звука.
+ * Субтитры вшиты в видео, звук — фоновая музыка, поэтому ролик понятен и без звука.
+ * Кнопки — значки без подписей; названия доступны экранным дикторам и всплывают при наведении.
  */
 export function CompanyVideo({ title, webm, mp4, poster, width, height, hasAudio }: CompanyVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -63,9 +64,8 @@ export function CompanyVideo({ title, webm, mp4, poster, width, height, hasAudio
     const next = !video.muted;
     video.muted = next;
     setMuted(next);
-    if (!next) {
-      // Включение звука — осознанное действие: начинаем ролик сначала.
-      video.currentTime = 0;
+    // Звук — фоновая музыка: ролик продолжается с того же места; если стоял на паузе — запускается.
+    if (!next && video.paused) {
       userPaused.current = false;
       video.play().catch(() => undefined);
     }
@@ -78,8 +78,9 @@ export function CompanyVideo({ title, webm, mp4, poster, width, height, hasAudio
     else video.webkitEnterFullscreen?.();
   };
 
+  // Полупрозрачные круглые значки: не закрывают ролик и становятся плотнее при наведении и фокусе.
   const controlClass =
-    "inline-flex min-h-11 items-center gap-2 rounded-[2px] bg-navy-950/80 px-4 text-[0.875rem] font-medium text-white backdrop-blur-sm transition-colors hover:bg-navy-950";
+    "pointer-events-auto inline-flex h-9 w-9 items-center justify-center rounded-full bg-navy-950/35 text-white backdrop-blur-sm transition-colors hover:bg-navy-950/70 focus-visible:bg-navy-950/70 sm:h-11 sm:w-11";
 
   return (
     <figure className="relative border-t-[3px] border-accent bg-navy-950 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)]">
@@ -101,40 +102,36 @@ export function CompanyVideo({ title, webm, mp4, poster, width, height, hasAudio
         <source src={mp4} type="video/mp4" />
       </video>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3 sm:p-4">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-1.5 sm:p-4">
         <button
           type="button"
           onClick={togglePlay}
-          className={`pointer-events-auto ${controlClass}`}
+          className={controlClass}
           aria-label={playing ? "Пауза" : "Воспроизвести ролик"}
+          title={playing ? "Пауза" : "Воспроизвести"}
         >
-          {playing ? <Pause aria-hidden="true" className="h-4 w-4" /> : <Play aria-hidden="true" className="h-4 w-4" />}
-          <span className="hidden sm:inline">{playing ? "Пауза" : "Смотреть"}</span>
+          {playing ? <Pause aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" /> : <Play aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />}
         </button>
         <div className="flex gap-2">
           {hasAudio ? (
             <button
               type="button"
               onClick={toggleSound}
-              className={`pointer-events-auto ${controlClass}`}
-              aria-pressed={!muted}
+              className={controlClass}
+              aria-label={muted ? "Включить музыку" : "Выключить музыку"}
+              title={muted ? "Включить музыку" : "Выключить музыку"}
             >
-              {muted ? (
-                <VolumeX aria-hidden="true" className="h-4 w-4" />
-              ) : (
-                <Volume2 aria-hidden="true" className="h-4 w-4" />
-              )}
-              {muted ? "Со звуком" : "Без звука"}
+              {muted ? <VolumeX aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" /> : <Volume2 aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />}
             </button>
           ) : null}
           <button
             type="button"
             onClick={fullscreen}
-            className={`pointer-events-auto ${controlClass}`}
+            className={controlClass}
             aria-label="Развернуть на весь экран"
+            title="Развернуть на весь экран"
           >
-            <Maximize2 aria-hidden="true" className="h-4 w-4" />
-            <span className="hidden sm:inline">Развернуть</span>
+            <Maximize2 aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
         </div>
       </div>

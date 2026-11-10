@@ -184,20 +184,6 @@ export default function HomePage() {
                 <ArrowRight aria-hidden="true" className="h-4 w-4" />
               </ButtonLink>
             </div>
-            <details className="group mt-8 border-t border-white/15 pt-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between text-[0.9375rem] font-medium text-white [&::-webkit-details-marker]:hidden">
-                Текст ролика
-                <span aria-hidden="true" className="text-navy-300 group-open:hidden">
-                  +
-                </span>
-                <span aria-hidden="true" className="hidden text-navy-300 group-open:inline">
-                  −
-                </span>
-              </summary>
-              <p className="mt-4 text-[0.9375rem] leading-relaxed text-navy-300">
-                {companyVideo.transcript.cues.map((cue) => cue.text).join(" ")}
-              </p>
-            </details>
           </div>
         </div>
       </section>

@@ -18,3 +18,5 @@ npm-debug.log*
 # Видео: кадры рендера и промежуточные файлы
 video/output/
 video/ffmpeg2pass-*.log
+# Генерируется video/scripts/music.py
+video/audio/music.wav

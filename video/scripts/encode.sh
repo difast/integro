@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Сборка видео для сайта из кадров Motion Canvas (output/project/*.jpeg).
 # Если в audio/ лежит voiceover.(wav|mp3|m4a|flac|ogg) — озвучка добавляется в ролик.
+# Иначе добавляется фоновая музыка audio/music.wav (создаётся scripts/music.py, если её нет).
 # Результат: ../public/video/integro.mp4, integro.webm, integro-poster.jpg
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -16,16 +17,23 @@ for ext in wav mp3 m4a flac ogg; do
   if [[ -f "audio/voiceover.$ext" ]]; then AUDIO="audio/voiceover.$ext"; break; fi
 done
 AUDIO_OFFSET="${AUDIO_OFFSET:-0}"
+# Громкость: озвучка — -16 LUFS, фоновая музыка тише — -20 LUFS.
+LOUDNESS="-16"
+if [[ -z "$AUDIO" ]]; then
+  [[ -f audio/music.wav ]] || python3 scripts/music.py
+  AUDIO="audio/music.wav"
+  LOUDNESS="-20"
+fi
 
 audio_in=()
 audio_mp4=(-an)
 audio_webm=(-an)
 if [[ -n "$AUDIO" ]]; then
-  echo "Озвучка: $AUDIO (сдвиг ${AUDIO_OFFSET} с)"
+  echo "Звук: $AUDIO (сдвиг ${AUDIO_OFFSET} с, ${LOUDNESS} LUFS)"
   audio_in=(-itsoffset "$AUDIO_OFFSET" -i "$AUDIO")
   # Нормализация громкости по EBU R128 и обрезка по длине видео.
-  audio_mp4=(-map 0:v -map 1:a -af "loudnorm=I=-16:TP=-1.5:LRA=11" -c:a aac -b:a 128k -shortest)
-  audio_webm=(-map 0:v -map 1:a -af "loudnorm=I=-16:TP=-1.5:LRA=11" -c:a libopus -b:a 96k -shortest)
+  audio_mp4=(-map 0:v -map 1:a -af "loudnorm=I=${LOUDNESS}:TP=-1.5:LRA=11" -c:a aac -b:a 128k -shortest)
+  audio_webm=(-map 0:v -map 1:a -af "loudnorm=I=${LOUDNESS}:TP=-1.5:LRA=11" -c:a libopus -b:a 96k -shortest)
 fi
 
 echo "MP4 (H.264)…"

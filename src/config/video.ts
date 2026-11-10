@@ -1,8 +1,6 @@
-import transcript from "@/content/video-transcript.json";
-
 /**
- * Ролик о компании (исходники — папка video/, Motion Canvas).
- * Расшифровка генерируется из video/src/timeline.ts командой `npm run voiceover` в папке video.
+ * Ролик о компании (исходники — папка video/, Motion Canvas). Озвучки нет: звук — фоновая музыка,
+ * синтезированная скриптом video/scripts/music.py; субтитры вшиты в видео.
  */
 export const companyVideo = {
   title: "ООО «Интегро»: как мы помогаем разобраться в вашем вопросе",
@@ -11,10 +9,6 @@ export const companyVideo = {
   poster: "/video/integro-poster.jpg",
   width: 1920,
   height: 1080,
-  /**
-   * Есть ли в ролике озвучка. Пока запись не добавлена, кнопка звука не показывается,
-   * чтобы не обещать то, чего нет. После добавления озвучки (video/audio/) — true.
-   */
-  hasAudio: false,
-  transcript,
+  /** Есть ли в ролике звук (фоновая музыка). Без звука кнопка включения не показывается. */
+  hasAudio: true,
 };
