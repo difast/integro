@@ -461,4 +461,34 @@ export const migrations: Migration[] = [
       CREATE INDEX request_files_request_idx ON request_files (request_id);
     `,
   },
+  {
+    // Маркетинг: короткие ссылки /go/<slug> для соцсетей и рекламы. Переход засчитывается (только ссылка
+    // и время, без данных о посетителе) и ведёт на сайт с UTM-метками — по ним заявка связывается со ссылкой.
+    id: "011_marketing_links",
+    sql: `
+      CREATE TABLE marketing_links (
+        id            serial PRIMARY KEY,
+        slug          text NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9][a-z0-9-]{1,39}$'),
+        title         text NOT NULL CHECK (char_length(title) BETWEEN 1 AND 100),
+        owner_label   text NOT NULL DEFAULT '' CHECK (char_length(owner_label) <= 100),
+        target_path   text NOT NULL DEFAULT '/' CHECK (target_path ~ '^/[A-Za-z0-9_./-]*$' AND char_length(target_path) <= 200),
+        utm_source    text NOT NULL CHECK (utm_source ~ '^[a-z0-9_.-]{1,40}$'),
+        utm_medium    text NOT NULL DEFAULT 'social' CHECK (utm_medium ~ '^[a-z0-9_.-]{1,40}$'),
+        utm_campaign  text NOT NULL DEFAULT '' CHECK (utm_campaign ~ '^[a-z0-9_.-]{0,40}$'),
+        active        boolean NOT NULL DEFAULT true,
+        created_at    timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE marketing_link_clicks (
+        id          bigserial PRIMARY KEY,
+        link_id     integer NOT NULL REFERENCES marketing_links (id) ON DELETE CASCADE,
+        created_at  timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX marketing_link_clicks_link_created_idx ON marketing_link_clicks (link_id, created_at);
+      CREATE INDEX requests_attribution_utm_content_idx ON requests ((attribution->>'utm_content')) WHERE attribution IS NOT NULL;
+
+      INSERT INTO marketing_links (slug, title, owner_label, utm_source, utm_medium, utm_campaign) VALUES
+        ('threads-vera', 'Threads — Вера (HR)', 'Вера, HR', 'threads', 'social', 'threads'),
+        ('threads', 'Threads — владелец', 'Владелец', 'threads', 'social', 'threads');
+    `,
+  },
 ];

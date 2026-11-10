@@ -10,6 +10,7 @@ const items = [
   { href: "/admin/plan-prodazh", label: "План продаж" },
   { href: "/admin/analitika", label: "Аналитика" },
   { href: "/admin/statistika", label: "Переходы" },
+  { href: "/admin/marketing", label: "Маркетинг" },
   { href: "/admin/uvedomleniya", label: "Уведомления" },
   { href: "/admin/sistema", label: "Система" },
 ];

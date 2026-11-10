@@ -33,6 +33,8 @@ export const BACKUP_TABLES = [
   "system_events",
   "backup_runs",
   "sales_plans",
+  "marketing_links",
+  "marketing_link_clicks",
 ] as const;
 
 /**

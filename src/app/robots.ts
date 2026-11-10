@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
   }
   return {
     // Закрытая панель и служебные API не индексируются (у них и так noindex); ИИ-поиск и обычные поисковики — по одним правилам.
-    rules: { userAgent: "*", allow: "/", disallow: ["/admin", "/api/"] },
+    rules: { userAgent: "*", allow: "/", disallow: ["/admin", "/api/", "/go/"] },
     sitemap: absoluteUrl("/sitemap.xml") ?? undefined,
     host: getSiteUrl() ?? undefined,
   };
